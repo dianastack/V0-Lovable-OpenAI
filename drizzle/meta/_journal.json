@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1744233051865,
+      "tag": "0000_mighty_stark_industries",
+      "breakpoints": true
+    }
+  ]
+}

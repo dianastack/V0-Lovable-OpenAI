@@ -1,0 +1,16 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+You're building an Electron app following good security practices
+
+# IPC
+Structure:
+- [ipc_client.ts](mdc:src/ipc/ipc_client.ts) - lives in the renderer process and is used to send IPCs to the main process
+- [preload.ts](mdc:src/preload.ts) - allowlist
+- [ipc_host.ts](mdc:src/ipc/ipc_host.ts) - contains the various IPC handlers attached which are: [app_handlers.ts](mdc:src/ipc/handlers/app_handlers.ts), [chat_stream_handlers.ts](mdc:src/ipc/handlers/chat_stream_handlers.ts), [settings_handlers.ts](mdc:src/ipc/handlers/settings_handlers.ts) etc.
+
+# React
+- This is a React app
+- Using TanStack router, NOT next.js, NOT react Router.
