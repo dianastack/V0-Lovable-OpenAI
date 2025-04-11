@@ -40,6 +40,8 @@ const ignore = (file: string) => {
 
 const config: ForgeConfig = {
   packagerConfig: {
+    icon: "./assets/icon/logo",
+
     osxSign: {
       identity: process.env.SIGN_ID,
     },
