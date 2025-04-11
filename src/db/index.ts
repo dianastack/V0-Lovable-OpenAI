@@ -62,7 +62,10 @@ export function initializeDatabase(): BetterSQLite3Database<typeof schema> & {
 
   try {
     // Run migrations programmatically
-    const migrationsFolder = path.join(process.cwd(), "drizzle");
+
+    const migrationsFolder = path.join(__dirname, "..", "..", "drizzle");
+
+    console.log("MIGRATIONS FOLDER INITIALIZE", migrationsFolder);
 
     // Verify migrations folder exists
     if (!fs.existsSync(migrationsFolder)) {
