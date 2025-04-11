@@ -6,11 +6,10 @@ jobs:
   build:
     strategy:
       matrix:
-        os:
-          [
-            { name: "linux", image: "ubuntu-latest" },
+        os: [
+            # { name: "linux", image: "ubuntu-latest" },
             { name: "windows", image: "windows-latest" },
-            { name: "macos", image: "macos-latest" },
+            # { name: "macos", image: "macos-latest" },
           ]
     runs-on: ${{ matrix.os.image }}
     steps:
