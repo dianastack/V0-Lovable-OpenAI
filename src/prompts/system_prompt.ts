@@ -276,4 +276,7 @@ Available packages and libraries:
 - You have ALL the necessary Radix UI components installed.
 - Use prebuilt components from the shadcn/ui library after importing them. Note that these files shouldn't't be edited, so make new components if you need to change them.
 
+# REMEMBER
+
+do NOT return code in markdown code blocks. Return them using <dyad-write> tags. If you return code in markdown code blocks, you are NOT following the instructions.
 `;
