@@ -26,6 +26,83 @@ import {
 import { ALLOWED_ENV_VARS } from "../../constants/models";
 import { getEnvVar } from "../utils/read_env";
 
+async function executeApp({
+  appPath,
+  appId,
+  event,
+}: {
+  appPath: string;
+  appId: number;
+  event: Electron.IpcMainInvokeEvent;
+}): Promise<{ processId: number }> {
+  const process = spawn("npm install && npm run dev", [], {
+    cwd: appPath,
+    shell: true,
+    stdio: "pipe", // Ensure stdio is piped so we can capture output/errors and detect close
+    detached: false, // Ensure child process is attached to the main process lifecycle unless explicitly backgrounded
+  });
+
+  // Check if process spawned correctly
+  if (!process.pid) {
+    // Attempt to capture any immediate errors if possible
+    let errorOutput = "";
+    process.stderr?.on("data", (data) => (errorOutput += data));
+    await new Promise((resolve) => process.on("error", resolve)); // Wait for error event
+    throw new Error(
+      `Failed to spawn process for app ${appId}. Error: ${
+        errorOutput || "Unknown spawn error"
+      }`
+    );
+  }
+
+  // Increment the counter and store the process reference with its ID
+  const currentProcessId = processCounter.increment();
+  runningApps.set(appId, { process, processId: currentProcessId });
+
+  // Log output
+  process.stdout?.on("data", (data) => {
+    console.log(
+      `App ${appId} (PID: ${process.pid}) stdout: ${data.toString().trim()}`
+    );
+    event.sender.send("app:output", {
+      type: "stdout",
+      message: data.toString().trim(),
+      appId: appId,
+    });
+  });
+
+  process.stderr?.on("data", (data) => {
+    console.error(
+      `App ${appId} (PID: ${process.pid}) stderr: ${data.toString().trim()}`
+    );
+    event.sender.send("app:output", {
+      type: "stderr",
+      message: data.toString().trim(),
+      appId: appId,
+    });
+  });
+
+  // Handle process exit/close
+  process.on("close", (code, signal) => {
+    console.log(
+      `App ${appId} (PID: ${process.pid}) process closed with code ${code}, signal ${signal}.`
+    );
+    removeAppIfCurrentProcess(appId, process);
+  });
+
+  // Handle errors during process lifecycle (e.g., command not found)
+  process.on("error", (err) => {
+    console.error(
+      `Error in app ${appId} (PID: ${process.pid}) process: ${err.message}`
+    );
+    removeAppIfCurrentProcess(appId, process);
+    // Note: We don't throw here as the error is asynchronous. The caller got a success response already.
+    // Consider adding ipcRenderer event emission to notify UI of the error.
+  });
+
+  return { processId: currentProcessId };
+}
+
 export function registerAppHandlers() {
   ipcMain.handle("create-app", async (_, params: CreateAppParams) => {
     const appPath = params.name;
@@ -197,74 +274,7 @@ export function registerAppHandlers() {
         const appPath = getDyadAppPath(app.path);
         console.log("appPath-CWD", appPath);
         try {
-          const process = spawn("npm install && npm run dev", [], {
-            cwd: appPath,
-            shell: true,
-            stdio: "pipe", // Ensure stdio is piped so we can capture output/errors and detect close
-            detached: false, // Ensure child process is attached to the main process lifecycle unless explicitly backgrounded
-          });
-
-          // Check if process spawned correctly
-          if (!process.pid) {
-            // Attempt to capture any immediate errors if possible
-            let errorOutput = "";
-            process.stderr?.on("data", (data) => (errorOutput += data));
-            await new Promise((resolve) => process.on("error", resolve)); // Wait for error event
-            throw new Error(
-              `Failed to spawn process for app ${appId}. Error: ${
-                errorOutput || "Unknown spawn error"
-              }`
-            );
-          }
-
-          // Increment the counter and store the process reference with its ID
-          const currentProcessId = processCounter.increment();
-          runningApps.set(appId, { process, processId: currentProcessId });
-
-          // Log output
-          process.stdout?.on("data", (data) => {
-            console.log(
-              `App ${appId} (PID: ${process.pid}) stdout: ${data
-                .toString()
-                .trim()}`
-            );
-            event.sender.send("app:output", {
-              type: "stdout",
-              message: data.toString().trim(),
-              appId: appId,
-            });
-          });
-
-          process.stderr?.on("data", (data) => {
-            console.error(
-              `App ${appId} (PID: ${process.pid}) stderr: ${data
-                .toString()
-                .trim()}`
-            );
-            event.sender.send("app:output", {
-              type: "stderr",
-              message: data.toString().trim(),
-              appId: appId,
-            });
-          });
-
-          // Handle process exit/close
-          process.on("close", (code, signal) => {
-            console.log(
-              `App ${appId} (PID: ${process.pid}) process closed with code ${code}, signal ${signal}.`
-            );
-            removeAppIfCurrentProcess(appId, process);
-          });
-
-          // Handle errors during process lifecycle (e.g., command not found)
-          process.on("error", (err) => {
-            console.error(
-              `Error in app ${appId} (PID: ${process.pid}) process: ${err.message}`
-            );
-            removeAppIfCurrentProcess(appId, process);
-            // Note: We don't throw here as the error is asynchronous. The caller got a success response already.
-            // Consider adding ipcRenderer event emission to notify UI of the error.
-          });
+          const currentProcessId = await executeApp({ appPath, appId, event });
 
           return { success: true, processId: currentProcessId };
         } catch (error: any) {
@@ -369,67 +379,7 @@ export function registerAppHandlers() {
           const appPath = getDyadAppPath(app.path);
           console.debug(`Starting app ${appId} in path ${app.path}`);
 
-          const process = spawn("npm install && npm run dev", [], {
-            cwd: appPath,
-            shell: true,
-            stdio: "pipe",
-            detached: false,
-          });
-
-          if (!process.pid) {
-            let errorOutput = "";
-            process.stderr?.on("data", (data) => (errorOutput += data));
-            await new Promise((resolve) => process.on("error", resolve));
-            throw new Error(
-              `Failed to spawn process for app ${appId}. Error: ${
-                errorOutput || "Unknown spawn error"
-              }`
-            );
-          }
-
-          const currentProcessId = processCounter.increment();
-          runningApps.set(appId, { process, processId: currentProcessId });
-
-          // Set up output handlers
-          process.stdout?.on("data", (data) => {
-            console.log(
-              `App ${appId} (PID: ${process.pid}) stdout: ${data
-                .toString()
-                .trim()}`
-            );
-            event.sender.send("app:output", {
-              type: "stdout",
-              message: data.toString().trim(),
-              appId: appId,
-            });
-          });
-
-          process.stderr?.on("data", (data) => {
-            console.error(
-              `App ${appId} (PID: ${process.pid}) stderr: ${data
-                .toString()
-                .trim()}`
-            );
-            event.sender.send("app:output", {
-              type: "stderr",
-              message: data.toString().trim(),
-              appId: appId,
-            });
-          });
-
-          process.on("close", (code, signal) => {
-            console.log(
-              `App ${appId} (PID: ${process.pid}) process closed with code ${code}, signal ${signal}.`
-            );
-            removeAppIfCurrentProcess(appId, process);
-          });
-
-          process.on("error", (err) => {
-            console.error(
-              `Error in app ${appId} (PID: ${process.pid}) process: ${err.message}`
-            );
-            removeAppIfCurrentProcess(appId, process);
-          });
+          const currentProcessId = await executeApp({ appPath, appId, event });
 
           return { success: true, processId: currentProcessId };
         } catch (error) {

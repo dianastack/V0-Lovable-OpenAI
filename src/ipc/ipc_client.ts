@@ -90,7 +90,7 @@ export class IpcClient {
         console.debug("chat:response:end");
         this.chatStreams.delete(chatId);
       } else {
-        showError(
+        console.error(
           new Error(`[IPC] No callbacks found for chat ${chatId} on stream end`)
         );
       }
@@ -178,7 +178,8 @@ export class IpcClient {
       });
       return content as string;
     } catch (error) {
-      showError(error);
+      // No toast because sometimes the file will disappear.
+      console.error(error);
       throw error;
     }
   }
@@ -237,7 +238,7 @@ export class IpcClient {
     if (callbacks) {
       this.chatStreams.delete(chatId);
     } else {
-      showError(new Error("Tried canceling chat that doesn't exist"));
+      console.error("Tried canceling chat that doesn't exist");
     }
   }
 
