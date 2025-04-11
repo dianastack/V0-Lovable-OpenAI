@@ -61,12 +61,16 @@ export const ProviderSettingSchema = z.object({
  */
 export type ProviderSetting = z.infer<typeof ProviderSettingSchema>;
 
+export const RuntimeModeSchema = z.enum(["web-sandbox", "local-node", "unset"]);
+export type RuntimeMode = z.infer<typeof RuntimeModeSchema>;
+
 /**
  * Zod schema for user settings
  */
 export const UserSettingsSchema = z.object({
   selectedModel: LargeLanguageModelSchema,
   providerSettings: z.record(z.string(), ProviderSettingSchema),
+  runtimeMode: RuntimeModeSchema,
 });
 
 /**

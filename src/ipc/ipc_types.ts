@@ -24,7 +24,6 @@ export interface ChatResponseEnd {
 
 export interface CreateAppParams {
   name: string;
-  path: string;
 }
 
 export interface CreateAppResult {

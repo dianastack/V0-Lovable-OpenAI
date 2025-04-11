@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     provider: "auto",
   },
   providerSettings: {},
+  runtimeMode: "unset",
 };
 
 const SETTINGS_FILE = "user-settings.json";

@@ -1,7 +1,7 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAtom, useSetAtom } from "jotai";
 import { chatInputValueAtom } from "../atoms/chatAtoms";
-import { selectedAppIdAtom, appsListAtom } from "@/atoms/appAtoms";
+import { selectedAppIdAtom } from "@/atoms/appAtoms";
 import { IpcClient } from "@/ipc/ipc_client";
 import { generateCuteAppName } from "@/lib/utils";
 import { useLoadApps } from "@/hooks/useLoadApps";
@@ -11,15 +11,16 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { isPreviewOpenAtom } from "@/atoms/viewAtoms";
 import { useState, useEffect } from "react";
 import { useStreamChat } from "@/hooks/useStreamChat";
+import { SetupRuntimeFlow } from "@/components/SetupRuntimeFlow";
+import { RuntimeMode } from "@/lib/schemas";
 
 export default function HomePage() {
   const [inputValue, setInputValue] = useAtom(chatInputValueAtom);
   const navigate = useNavigate();
   const search = useSearch({ from: "/" });
-  const [appsList] = useAtom(appsListAtom);
   const setSelectedAppId = useSetAtom(selectedAppIdAtom);
   const { refreshApps } = useLoadApps();
-  const { isAnyProviderSetup } = useSettings();
+  const { settings, isAnyProviderSetup, updateSettings } = useSettings();
   const setIsPreviewOpen = useSetAtom(isPreviewOpenAtom);
   const [isLoading, setIsLoading] = useState(false);
   const { streamMessage } = useStreamChat();
@@ -34,6 +35,10 @@ export default function HomePage() {
     }
   }, [appId, navigate]);
 
+  const handleSetRuntimeMode = async (mode: RuntimeMode) => {
+    await updateSettings({ runtimeMode: mode });
+  };
+
   const handleSubmit = async () => {
     if (!inputValue.trim()) return;
 
@@ -42,33 +47,33 @@ export default function HomePage() {
       // Create the chat and navigate
       const result = await IpcClient.getInstance().createApp({
         name: generateCuteAppName(),
-        path: "./apps/foo",
       });
 
-      // Add a 2-second timeout *after* the streamMessage call
-      // This makes the loading UI feel less janky.
+      // Stream the message
       streamMessage({ prompt: inputValue, chatId: result.chatId });
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       setInputValue("");
       setSelectedAppId(result.app.id);
       setIsPreviewOpen(false);
-      refreshApps();
+      await refreshApps(); // Ensure refreshApps is awaited if it's async
       navigate({ to: "/chat", search: { id: result.chatId } });
     } catch (error) {
       console.error("Failed to create chat:", error);
-      setIsLoading(false);
+      setIsLoading(false); // Ensure loading state is reset on error
     }
+    // No finally block needed for setIsLoading(false) here if navigation happens on success
   };
 
-  // Loading overlay
+  // Loading overlay for app creation
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center max-w-3xl m-auto p-8">
         <div className="w-full flex flex-col items-center">
+          {/* Loading Spinner */}
           <div className="relative w-24 h-24 mb-8">
             <div className="absolute top-0 left-0 w-full h-full border-8 border-gray-200 dark:border-gray-700 rounded-full"></div>
-            <div className="absolute top-0 left-0 w-full h-full border-8 border-t-(--primary) rounded-full animate-spin"></div>
+            <div className="absolute top-0 left-0 w-full h-full border-8 border-t-primary rounded-full animate-spin"></div>
           </div>
           <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-gray-200">
             Building your app
@@ -82,6 +87,13 @@ export default function HomePage() {
     );
   }
 
+  // Runtime Setup Flow
+  // Render this only if runtimeMode is not set in settings
+  if (settings?.runtimeMode === "unset") {
+    return <SetupRuntimeFlow onRuntimeSelected={handleSetRuntimeMode} />;
+  }
+
+  // Main Home Page Content (Rendered only if runtimeMode is set)
   return (
     <div className="flex flex-col items-center justify-center max-w-3xl m-auto p-8">
       <h1 className="text-6xl font-bold mb-12 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 tracking-tight">
