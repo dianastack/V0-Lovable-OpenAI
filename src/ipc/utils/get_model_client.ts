@@ -4,7 +4,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { LargeLanguageModel, UserSettings } from "../../lib/schemas";
 import { PROVIDER_TO_ENV_VAR, AUTO_MODELS } from "../../constants/models";
-
+import { getEnvVar } from "./read_env";
 export function getModelClient(
   model: LargeLanguageModel,
   settings: UserSettings
@@ -15,7 +15,7 @@ export function getModelClient(
     for (const autoModel of AUTO_MODELS) {
       const apiKey =
         settings.providerSettings?.[autoModel.provider]?.apiKey ||
-        process.env[PROVIDER_TO_ENV_VAR[autoModel.provider]];
+        getEnvVar(PROVIDER_TO_ENV_VAR[autoModel.provider]);
 
       if (apiKey) {
         console.log(
@@ -38,7 +38,7 @@ export function getModelClient(
 
   const apiKey =
     settings.providerSettings?.[model.provider]?.apiKey ||
-    process.env[PROVIDER_TO_ENV_VAR[model.provider]];
+    getEnvVar(PROVIDER_TO_ENV_VAR[model.provider]);
   switch (model.provider) {
     case "openai": {
       const provider = createOpenAI({ apiKey });

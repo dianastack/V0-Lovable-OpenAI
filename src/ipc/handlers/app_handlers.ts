@@ -24,6 +24,7 @@ import {
   RunningAppInfo,
 } from "../utils/process_manager";
 import { ALLOWED_ENV_VARS } from "../../constants/models";
+import { getEnvVar } from "../utils/read_env";
 
 export function registerAppHandlers() {
   ipcMain.handle("create-app", async (_, params: CreateAppParams) => {
@@ -164,7 +165,7 @@ export function registerAppHandlers() {
   ipcMain.handle("get-env-vars", async () => {
     const envVars: Record<string, string | undefined> = {};
     for (const key of ALLOWED_ENV_VARS) {
-      envVars[key] = process.env[key];
+      envVars[key] = getEnvVar(key);
     }
     return envVars;
   });
