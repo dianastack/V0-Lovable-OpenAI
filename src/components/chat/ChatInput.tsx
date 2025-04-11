@@ -19,7 +19,7 @@ interface ChatInputProps {
 export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
   const [inputValue, setInputValue] = useAtom(chatInputValueAtom);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, isAnyProviderSetup } = useSettings();
   const { streamMessage, isStreaming, setIsStreaming, error, setError } =
     useStreamChat();
   const [selectedAppId] = useAtom(selectedAppIdAtom);
@@ -117,7 +117,7 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
             ) : (
               <button
                 onClick={submitHandler}
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || !isAnyProviderSetup()}
                 className="px-2 py-2 mt-1 mr-2 hover:bg-(--background-darkest) text-(--sidebar-accent-fg) rounded-lg disabled:opacity-50"
               >
                 <SendIcon size={20} />
