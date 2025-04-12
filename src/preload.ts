@@ -15,6 +15,7 @@ const validInvokeChannels = [
   "get-chats",
   "list-apps",
   "get-app",
+  "get-app-sandbox-config",
   "edit-app-file",
   "read-app-file",
   "run-app",

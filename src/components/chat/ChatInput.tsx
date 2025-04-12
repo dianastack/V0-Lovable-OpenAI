@@ -30,7 +30,6 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
     if (textarea) {
       textarea.style.height = "0px";
       const scrollHeight = textarea.scrollHeight;
-      console.log("scrollHeight", scrollHeight);
       textarea.style.height = `${scrollHeight + 4}px`;
     }
   };

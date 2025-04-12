@@ -14,6 +14,7 @@ import type {
   CreateAppParams,
   CreateAppResult,
   ListAppsResponse,
+  SandboxConfig,
   Version,
 } from "./ipc_types";
 import { showError } from "@/lib/toast";
@@ -121,6 +122,18 @@ export class IpcClient {
     try {
       const result = await this.ipcRenderer.invoke("create-app", params);
       return result as CreateAppResult;
+    } catch (error) {
+      showError(error);
+      throw error;
+    }
+  }
+
+  public async getAppSandboxConfig(appId: number): Promise<SandboxConfig> {
+    try {
+      const data = await this.ipcRenderer.invoke("get-app-sandbox-config", {
+        appId,
+      });
+      return data;
     } catch (error) {
       showError(error);
       throw error;

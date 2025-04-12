@@ -28,7 +28,6 @@ export const DyadAddDependency: React.FC<DyadAddDependencyProps> = ({
 }) => {
   // Extract package attribute from the node if available
   const packages = node?.properties?.packages?.split(" ") || "";
-  console.log("packages", packages);
   const [isInstalling, setIsInstalling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedChatId = useAtomValue(selectedChatIdAtom);

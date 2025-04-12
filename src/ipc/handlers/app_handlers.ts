@@ -2,7 +2,12 @@ import { ipcMain } from "electron";
 import { db, getDatabasePath } from "../../db";
 import { apps, chats } from "../../db/schema";
 import { desc, eq } from "drizzle-orm";
-import type { App, CreateAppParams, Version } from "../ipc_types";
+import type {
+  App,
+  CreateAppParams,
+  SandboxConfig,
+  Version,
+} from "../ipc_types";
 import fs from "node:fs";
 import path from "node:path";
 import { getDyadAppPath, getUserDataPath } from "../../paths/paths";
@@ -25,6 +30,7 @@ import {
 } from "../utils/process_manager";
 import { ALLOWED_ENV_VARS } from "../../constants/models";
 import { getEnvVar } from "../utils/read_env";
+import { readSettings } from "../../main/settings";
 
 async function executeApp({
   appPath,
@@ -34,7 +40,26 @@ async function executeApp({
   appPath: string;
   appId: number;
   event: Electron.IpcMainInvokeEvent;
-}): Promise<{ processId: number }> {
+}): Promise<void> {
+  const settings = readSettings();
+  if (settings.runtimeMode === "web-sandbox") {
+    return;
+  }
+  if (settings.runtimeMode === "local-node") {
+    await executeAppLocalNode({ appPath, appId, event });
+    return;
+  }
+  throw new Error("Invalid runtime mode");
+}
+async function executeAppLocalNode({
+  appPath,
+  appId,
+  event,
+}: {
+  appPath: string;
+  appId: number;
+  event: Electron.IpcMainInvokeEvent;
+}): Promise<void> {
   const process = spawn("npm install && npm run dev", [], {
     cwd: appPath,
     shell: true,
@@ -99,11 +124,43 @@ async function executeApp({
     // Note: We don't throw here as the error is asynchronous. The caller got a success response already.
     // Consider adding ipcRenderer event emission to notify UI of the error.
   });
-
-  return { processId: currentProcessId };
 }
 
 export function registerAppHandlers() {
+  ipcMain.handle(
+    "get-app-sandbox-config",
+    async (_, { appId }: { appId: number }): Promise<SandboxConfig> => {
+      const app = await db.query.apps.findFirst({
+        where: eq(apps.id, appId),
+      });
+      if (!app) {
+        throw new Error("App not found");
+      }
+      const appPath = getDyadAppPath(app.path);
+      const files = getFilesRecursively(appPath, appPath);
+
+      const filesMap = await Promise.all(
+        files.map(async (file) => {
+          const content = await fs.promises.readFile(
+            path.join(appPath, file),
+            "utf-8"
+          );
+          return { [file]: content };
+        })
+      );
+
+      // Get dependencies from package.json
+      const packageJsonPath = path.join(appPath, "package.json");
+      const packageJson = await fs.promises.readFile(packageJsonPath, "utf-8");
+      const dependencies = JSON.parse(packageJson).dependencies;
+
+      return {
+        files: filesMap.reduce((acc, file) => ({ ...acc, ...file }), {}),
+        dependencies,
+        entry: "src/main.tsx",
+      };
+    }
+  );
   ipcMain.handle("create-app", async (_, params: CreateAppParams) => {
     const appPath = params.name;
     const fullAppPath = getDyadAppPath(appPath);
@@ -272,7 +329,6 @@ export function registerAppHandlers() {
         console.debug(`Starting app ${appId} in path ${app.path}`);
 
         const appPath = getDyadAppPath(app.path);
-        console.log("appPath-CWD", appPath);
         try {
           const currentProcessId = await executeApp({ appPath, appId, event });
 
@@ -379,9 +435,9 @@ export function registerAppHandlers() {
           const appPath = getDyadAppPath(app.path);
           console.debug(`Starting app ${appId} in path ${app.path}`);
 
-          const currentProcessId = await executeApp({ appPath, appId, event });
+          await executeApp({ appPath, appId, event });
 
-          return { success: true, processId: currentProcessId };
+          return { success: true };
         } catch (error) {
           console.error(`Error restarting app ${appId}:`, error);
           throw error;

@@ -57,3 +57,9 @@ export interface Version {
   message: string;
   timestamp: number;
 }
+
+export interface SandboxConfig {
+  files: Record<string, string>;
+  dependencies: Record<string, string>;
+  entry: string;
+}

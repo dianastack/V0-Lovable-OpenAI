@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAtom } from "jotai";
 import { versionsListAtom } from "@/atoms/appAtoms";
 import { IpcClient } from "@/ipc/ipc_client";
@@ -34,7 +34,7 @@ export function useLoadVersions(appId: number | null) {
     loadVersions();
   }, [appId, setVersions]);
 
-  const refreshVersions = async () => {
+  const refreshVersions = useCallback(async () => {
     if (appId === null) {
       return;
     }
@@ -48,7 +48,7 @@ export function useLoadVersions(appId: number | null) {
       console.error("Error refreshing versions:", error);
       setError(error instanceof Error ? error : new Error(String(error)));
     }
-  };
+  }, [appId, setVersions, setError]);
 
   return { versions, loading, error, refreshVersions };
 }

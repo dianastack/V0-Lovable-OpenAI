@@ -24,6 +24,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSettings } from "@/hooks/useSettings";
+import {
+  loadSandpackClient,
+  type SandboxSetup,
+  type ClientOptions,
+  SandpackClient,
+} from "@codesandbox/sandpack-client";
+import { showError } from "@/lib/toast";
+import { SandboxConfig } from "@/ipc/ipc_types";
 
 interface ErrorBannerProps {
   error: string | null;
@@ -107,7 +116,6 @@ export const PreviewIframe = ({
   // Effect to parse routes from the router file
   useEffect(() => {
     if (routerContent) {
-      console.log("routerContent", routerContent);
       try {
         const routes: Array<{ path: string; label: string }> = [];
 
@@ -148,6 +156,7 @@ export const PreviewIframe = ({
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
   const [currentHistoryPosition, setCurrentHistoryPosition] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const { settings } = useSettings();
 
   // Add message listener for iframe errors and navigation events
   useEffect(() => {
@@ -392,7 +401,9 @@ export const PreviewIframe = ({
           }}
         />
 
-        {!appUrl ? (
+        {settings?.runtimeMode === "web-sandbox" ? (
+          <SandpackIframe reloadKey={reloadKey} />
+        ) : !appUrl ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 bg-gray-50 dark:bg-gray-950">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400 dark:text-gray-500" />
             <p className="text-gray-600 dark:text-gray-300">
@@ -411,4 +422,121 @@ export const PreviewIframe = ({
       </div>
     </div>
   );
+};
+
+const parseTailwindConfig = (config: string) => {
+  const themeRegex = /theme\s*:\s*(\{[\s\S]*?\})(?=\s*,\s*plugins)/;
+  const match = config.match(themeRegex);
+  if (!match) return "{};";
+  return `{theme: ${match[1]}};`;
+};
+
+const SandpackIframe = ({ reloadKey }: { reloadKey: number }) => {
+  const selectedAppId = useAtomValue(selectedAppIdAtom);
+  const { app } = useLoadApp(selectedAppId);
+  const keyRef = useRef<number | null>(null);
+  const isFirstRender = useRef(true);
+  const sandpackClientRef = useRef<SandpackClient | null>(null);
+
+  async function loadSandpack() {
+    if (keyRef.current === reloadKey) return;
+    keyRef.current = reloadKey;
+
+    if (!iframeRef.current || !app || !selectedAppId) return;
+    const sandboxConfig = await IpcClient.getInstance().getAppSandboxConfig(
+      selectedAppId
+    );
+
+    const sandpackConfig: SandboxSetup = mapSandpackConfig(sandboxConfig);
+
+    const options: ClientOptions = {
+      // bundlerURL: "https://sandpack.dyad.sh/",
+      showOpenInCodeSandbox: false,
+      showLoadingScreen: true,
+      showErrorScreen: true,
+      externalResources: [
+        // "https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4",
+        "https://cdn.tailwindcss.com",
+      ],
+    };
+
+    let client: SandpackClient | undefined;
+    try {
+      client = await loadSandpackClient(
+        iframeRef.current,
+        sandpackConfig,
+        options
+      );
+      sandpackClientRef.current = client;
+      return client;
+    } catch (error) {
+      showError(error);
+    }
+  }
+
+  useEffect(() => {
+    async function updateSandpack() {
+      if (sandpackClientRef.current && selectedAppId) {
+        const sandboxConfig = await IpcClient.getInstance().getAppSandboxConfig(
+          selectedAppId
+        );
+        sandpackClientRef.current.updateSandbox(
+          mapSandpackConfig(sandboxConfig)
+        );
+      }
+    }
+    updateSandpack();
+  }, [app]);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (!iframeRef.current || !app || !selectedAppId) return () => {};
+
+    const clientPromise = loadSandpack();
+    return () => {
+      clientPromise.then((client) => {
+        client?.destroy();
+        sandpackClientRef.current = null;
+      });
+    };
+  }, [reloadKey]);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      className="w-full h-full border-none bg-gray-50"
+    ></iframe>
+  );
+};
+
+const mapSandpackConfig = (sandboxConfig: SandboxConfig): SandboxSetup => {
+  return {
+    files: Object.fromEntries(
+      Object.entries(sandboxConfig.files).map(([key, value]) => [
+        key,
+        {
+          code: value.replace(
+            "import './globals.css'",
+            `
+const injectedStyle = document.createElement("style");
+injectedStyle.textContent = \`${sandboxConfig.files["src/globals.css"]}\`;
+injectedStyle.type = "text/tailwindcss";
+document.head.appendChild(injectedStyle);
+
+window.tailwind.config = ${parseTailwindConfig(
+              sandboxConfig.files["tailwind.config.ts"]
+            )}
+`
+          ),
+        },
+      ])
+    ),
+    dependencies: sandboxConfig.dependencies,
+    entry: sandboxConfig.entry,
+  };
 };
