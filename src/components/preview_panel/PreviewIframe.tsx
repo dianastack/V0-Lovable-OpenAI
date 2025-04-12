@@ -442,22 +442,20 @@ const SandpackIframe = ({ reloadKey }: { reloadKey: number }) => {
     if (keyRef.current === reloadKey) return;
     keyRef.current = reloadKey;
 
-    if (!iframeRef.current || !app || !selectedAppId) return;
+    if (!selectedAppId) return;
     const sandboxConfig = await IpcClient.getInstance().getAppSandboxConfig(
       selectedAppId
     );
+    if (!iframeRef.current || !app) return;
 
     const sandpackConfig: SandboxSetup = mapSandpackConfig(sandboxConfig);
 
     const options: ClientOptions = {
-      // bundlerURL: "https://sandpack.dyad.sh/",
+      bundlerURL: "http://localhost:31111",
       showOpenInCodeSandbox: false,
       showLoadingScreen: true,
       showErrorScreen: true,
-      externalResources: [
-        // "https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4",
-        "https://cdn.tailwindcss.com",
-      ],
+      externalResources: ["https://cdn.tailwindcss.com"],
     };
 
     let client: SandpackClient | undefined;

@@ -31,25 +31,103 @@ import {
 import { ALLOWED_ENV_VARS } from "../../constants/models";
 import { getEnvVar } from "../utils/read_env";
 import { readSettings } from "../../main/settings";
+import { Worker } from "worker_threads";
+
+// Keep track of the static file server worker
+let staticServerWorker: Worker | null = null;
+let staticServerPort: number | null = null;
+// let staticServerRootDir: string | null = null; // Store the root dir it's serving - Removed
 
 async function executeApp({
   appPath,
   appId,
-  event,
+  event, // Keep event for local-node case
 }: {
   appPath: string;
   appId: number;
   event: Electron.IpcMainInvokeEvent;
 }): Promise<void> {
+  // Return type is void, communication happens via event.sender.send
   const settings = readSettings();
   if (settings.runtimeMode === "web-sandbox") {
-    return;
+    // If server is already running, do nothing.
+    if (staticServerWorker) {
+      console.log(`Static server already running on port ${staticServerPort}`);
+      // No need to send app:output here
+      return;
+    }
+
+    // Start the worker if it's not running
+    console.log(`Starting static file server worker for the first time.`);
+    // No need to send starting status
+
+    const workerScriptPath = path.resolve(
+      __dirname,
+      "../../worker/static_file_server.js"
+    );
+
+    // Check if worker script exists
+    if (!fs.existsSync(workerScriptPath)) {
+      const errorMsg = `Worker script not found at ${workerScriptPath}. Build process might be incomplete.`;
+      console.error(errorMsg);
+      // No need to send error status via event
+      throw new Error(errorMsg);
+    }
+
+    staticServerWorker = new Worker(workerScriptPath, {
+      workerData: {
+        rootDir: path.join(__dirname, "..", "..", "sandpack-generated"), // Use the appPath of the first app run in this mode
+        // Optionally pass other config like port preference
+        // port: 3001 // Example
+      },
+    });
+    // staticServerRootDir = appPath; // Removed
+
+    staticServerWorker.on("message", (message) => {
+      console.log(
+        `Message from static server worker: ${JSON.stringify(message)}`
+      );
+      if (message.status === "ready" && message.port) {
+        staticServerPort = message.port;
+        console.log(`Static file server ready on port ${staticServerPort}`);
+        // No need to send ready status
+      } else if (message.status === "error") {
+        console.error(`Static file server worker error: ${message.message}`);
+        // No need to send error status
+        // Terminate the failed worker
+        staticServerWorker?.terminate();
+        staticServerWorker = null;
+        staticServerPort = null;
+      }
+    });
+
+    staticServerWorker.on("error", (error) => {
+      console.error(`Static file server worker encountered an error:`, error);
+      // No need to send error status
+      staticServerWorker = null; // Worker is likely unusable
+      staticServerPort = null;
+    });
+
+    staticServerWorker.on("exit", (code) => {
+      console.log(`Static file server worker exited with code ${code}`);
+      // Clear state if the worker exits unexpectedly
+      if (staticServerWorker) {
+        // Check avoids race condition if terminated intentionally
+        staticServerWorker = null;
+        staticServerPort = null;
+        // No need to send exit status
+      }
+    });
+
+    return; // Return void
   }
   if (settings.runtimeMode === "local-node") {
+    // Ensure worker isn't running if switching modes (optional, depends on desired behavior)
+    // if (staticServerWorker) { await staticServerWorker.terminate(); staticServerWorker = null; staticServerPort = null; }
     await executeAppLocalNode({ appPath, appId, event });
     return;
   }
-  throw new Error("Invalid runtime mode");
+  throw new Error(`Invalid runtime mode: ${settings.runtimeMode}`);
 }
 async function executeAppLocalNode({
   appPath,
@@ -350,19 +428,23 @@ export function registerAppHandlers() {
 
   ipcMain.handle("stop-app", async (_, { appId }: { appId: number }) => {
     console.log(
-      `Attempting to stop app ${appId}. Current running apps: ${runningApps.size}`
+      `Attempting to stop app ${appId} (local-node only). Current running apps: ${runningApps.size}`
     );
-    // Use withLock to ensure atomicity of the stop operation
+
+    // Static server worker is NOT terminated here anymore
+
+    // Use withLock for local-node apps
     return withLock(appId, async () => {
       const appInfo = runningApps.get(appId);
 
       if (!appInfo) {
         console.log(
-          `App ${appId} not found in running apps map. Assuming already stopped.`
+          `App ${appId} not found in running apps map (local-node). Assuming already stopped or was web-sandbox.`
         );
+        // If no local-node app was running, and we terminated the static server above, return success.
         return {
           success: true,
-          message: "App not running or already stopped.",
+          message: "App not running in local-node mode.", // Simplified message
         };
       }
 
@@ -406,6 +488,8 @@ export function registerAppHandlers() {
       event: Electron.IpcMainInvokeEvent,
       { appId }: { appId: number }
     ) => {
+      // Static server worker is NOT terminated here anymore
+
       return withLock(appId, async () => {
         try {
           // First stop the app if it's running
@@ -413,7 +497,7 @@ export function registerAppHandlers() {
           if (appInfo) {
             const { process, processId } = appInfo;
             console.log(
-              `Stopping app ${appId} (processId ${processId}) before restart`
+              `Stopping local-node app ${appId} (processId ${processId}) before restart` // Adjusted log
             );
 
             // Use the killProcess utility to stop the process
@@ -421,6 +505,10 @@ export function registerAppHandlers() {
 
             // Remove from running apps
             runningApps.delete(appId);
+          } else {
+            console.log(
+              `App ${appId} not running in local-node mode, proceeding to start.`
+            );
           }
 
           // Now start the app again
@@ -433,9 +521,11 @@ export function registerAppHandlers() {
           }
 
           const appPath = getDyadAppPath(app.path);
-          console.debug(`Starting app ${appId} in path ${app.path}`);
+          console.debug(
+            `Executing app ${appId} in path ${app.path} after restart request`
+          ); // Adjusted log
 
-          await executeApp({ appPath, appId, event });
+          await executeApp({ appPath, appId, event }); // This will handle starting either mode
 
           return { success: true };
         } catch (error) {
@@ -717,6 +807,8 @@ export function registerAppHandlers() {
   );
 
   ipcMain.handle("delete-app", async (_, { appId }: { appId: number }) => {
+    // Static server worker is NOT terminated here anymore
+
     return withLock(appId, async () => {
       // Check if app exists
       const app = await db.query.apps.findFirst({
@@ -731,10 +823,14 @@ export function registerAppHandlers() {
       if (runningApps.has(appId)) {
         const appInfo = runningApps.get(appId)!;
         try {
+          console.log(`Stopping local-node app ${appId} before deletion.`); // Adjusted log
           await killProcess(appInfo.process);
           runningApps.delete(appId);
         } catch (error: any) {
-          console.error(`Error stopping app ${appId} before deletion:`, error);
+          console.error(
+            `Error stopping local-node app ${appId} before deletion:`,
+            error
+          ); // Adjusted log
           // Continue with deletion even if stopping fails
         }
       }
@@ -876,6 +972,14 @@ export function registerAppHandlers() {
   );
 
   ipcMain.handle("reset-all", async () => {
+    // Terminate static server worker if it's running
+    if (staticServerWorker) {
+      console.log(`Terminating static server worker on reset-all command.`);
+      await staticServerWorker.terminate();
+      staticServerWorker = null;
+      staticServerPort = null;
+      staticServerRootDir = null;
+    }
     // Stop all running apps first
     const runningAppIds = Array.from(runningApps.keys());
     for (const appId of runningAppIds) {
