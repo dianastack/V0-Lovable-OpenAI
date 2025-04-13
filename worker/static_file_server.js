@@ -115,9 +115,13 @@ const handleRequest = (config) => async (req, res) => {
       path.join(config.rootDir, parsedUrl.pathname)
     );
 
-    // Handle root path or directory paths, serve index.html
-    if (filePath === path.normalize(config.rootDir) || filePath.endsWith("/")) {
-      filePath = path.join(filePath, "index.html");
+    // Handle root path, directory paths, or paths without file extensions by serving index.html
+    if (
+      filePath === path.normalize(config.rootDir) ||
+      filePath.endsWith("/") ||
+      !path.extname(filePath)
+    ) {
+      filePath = path.join(config.rootDir, "index.html");
     }
 
     // Check if file exists and get its stats
