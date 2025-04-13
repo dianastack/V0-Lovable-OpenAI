@@ -983,7 +983,6 @@ export function registerAppHandlers() {
       await staticServerWorker.terminate();
       staticServerWorker = null;
       staticServerPort = null;
-      staticServerRootDir = null;
     }
     // Stop all running apps first
     const runningAppIds = Array.from(runningApps.keys());
