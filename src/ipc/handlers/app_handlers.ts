@@ -32,6 +32,11 @@ import { ALLOWED_ENV_VARS } from "../../constants/models";
 import { getEnvVar } from "../utils/read_env";
 import { readSettings } from "../../main/settings";
 import { Worker } from "worker_threads";
+import fixPath from "fix-path";
+
+// Needed, otherwise electron in MacOS/Linux will not be able
+// to find "npm".
+fixPath();
 
 // Keep track of the static file server worker
 let staticServerWorker: Worker | null = null;
