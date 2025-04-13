@@ -435,7 +435,6 @@ const SandpackIframe = ({ reloadKey }: { reloadKey: number }) => {
   const selectedAppId = useAtomValue(selectedAppIdAtom);
   const { app } = useLoadApp(selectedAppId);
   const keyRef = useRef<number | null>(null);
-  const isFirstRender = useRef(true);
   const sandpackClientRef = useRef<SandpackClient | null>(null);
 
   async function loadSandpack() {
@@ -443,9 +442,14 @@ const SandpackIframe = ({ reloadKey }: { reloadKey: number }) => {
     keyRef.current = reloadKey;
 
     if (!selectedAppId) return;
+    if (sandpackClientRef.current) {
+      sandpackClientRef.current.destroy();
+      sandpackClientRef.current = null;
+    }
     const sandboxConfig = await IpcClient.getInstance().getAppSandboxConfig(
       selectedAppId
     );
+
     if (!iframeRef.current || !app) return;
 
     const sandpackConfig: SandboxSetup = mapSandpackConfig(sandboxConfig);
@@ -487,20 +491,8 @@ const SandpackIframe = ({ reloadKey }: { reloadKey: number }) => {
   }, [app]);
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    if (!iframeRef.current || !app || !selectedAppId) return () => {};
-
-    const clientPromise = loadSandpack();
-    return () => {
-      clientPromise.then((client) => {
-        client?.destroy();
-        sandpackClientRef.current = null;
-      });
-    };
+    if (!iframeRef.current || !app || !selectedAppId) return;
+    loadSandpack();
   }, [reloadKey]);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
