@@ -114,7 +114,6 @@ const handleRequest = (config) => async (req, res) => {
     let filePath = path.normalize(
       path.join(config.rootDir, parsedUrl.pathname)
     );
-    console.log(`filePath: ${filePath}`, "request", req.url);
 
     // Handle root path or directory paths, serve index.html
     if (filePath === path.normalize(config.rootDir) || filePath.endsWith("/")) {
@@ -124,7 +123,6 @@ const handleRequest = (config) => async (req, res) => {
     // Check if file exists and get its stats
     let stats;
     try {
-      console.log(`filePath: ${filePath}`, "stats");
       stats = await statAsync(filePath);
     } catch (error) {
       // File not found
@@ -216,8 +214,8 @@ export const startServer = async (userConfig = {}) => {
       console.error(`[Worker ${process.pid}] Server error:`, err);
       reject(err); // Reject promise on server error during startup
     });
-
-    server.listen(config.port, () => {
+    console.log(`[Worker ${process.pid}] Listening on port ${config.port}`);
+    server.listen(config.port, "localhost", () => {
       console.log(
         `[Worker ${process.pid}] 🚀 Static file server running at http://localhost:${config.port}/`
       );
