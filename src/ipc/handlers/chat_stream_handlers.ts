@@ -158,6 +158,7 @@ export function registerChatStreamHandlers() {
 
         const { textStream } = streamText({
           maxTokens: 8_000,
+          temperature: 0,
           model: modelClient,
           system: SYSTEM_PROMPT,
           messages: [
