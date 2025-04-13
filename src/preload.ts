@@ -31,6 +31,7 @@ const validInvokeChannels = [
   "get-env-vars",
   "open-external-url",
   "reset-all",
+  "nodejs-status",
 ] as const;
 
 // Add valid receive channels

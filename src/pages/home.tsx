@@ -20,7 +20,7 @@ export default function HomePage() {
   const search = useSearch({ from: "/" });
   const setSelectedAppId = useSetAtom(selectedAppIdAtom);
   const { refreshApps } = useLoadApps();
-  const { settings, isAnyProviderSetup, updateSettings } = useSettings();
+  const { settings, isAnyProviderSetup } = useSettings();
   const setIsPreviewOpen = useSetAtom(isPreviewOpenAtom);
   const [isLoading, setIsLoading] = useState(false);
   const { streamMessage } = useStreamChat();
@@ -34,10 +34,6 @@ export default function HomePage() {
       navigate({ to: "/app-details", search: { appId } });
     }
   }, [appId, navigate]);
-
-  const handleSetRuntimeMode = async (mode: RuntimeMode) => {
-    await updateSettings({ runtimeMode: mode });
-  };
 
   const handleSubmit = async () => {
     if (!inputValue.trim()) return;
@@ -90,7 +86,7 @@ export default function HomePage() {
   // Runtime Setup Flow
   // Render this only if runtimeMode is not set in settings
   if (settings?.runtimeMode === "unset") {
-    return <SetupRuntimeFlow onRuntimeSelected={handleSetRuntimeMode} />;
+    return <SetupRuntimeFlow />;
   }
 
   // Main Home Page Content (Rendered only if runtimeMode is set)

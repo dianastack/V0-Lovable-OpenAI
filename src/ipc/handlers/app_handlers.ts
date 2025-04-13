@@ -209,7 +209,59 @@ async function executeAppLocalNode({
   });
 }
 
+function checkCommandExists(command: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    let output = "";
+    const process = spawn(command, ["--version"], {
+      shell: true,
+      stdio: ["ignore", "pipe", "pipe"], // ignore stdin, pipe stdout/stderr
+    });
+
+    process.stdout?.on("data", (data) => {
+      output += data.toString();
+    });
+
+    process.stderr?.on("data", (data) => {
+      // Log stderr but don't treat it as a failure unless the exit code is non-zero
+      console.warn(
+        `Stderr from "${command} --version": ${data.toString().trim()}`
+      );
+    });
+
+    process.on("error", (error) => {
+      console.error(`Error executing command "${command}":`, error.message);
+      resolve(null); // Command execution failed
+    });
+
+    process.on("close", (code) => {
+      if (code === 0) {
+        resolve(output.trim()); // Command succeeded, return trimmed output
+      } else {
+        console.error(
+          `Command "${command} --version" failed with code ${code}`
+        );
+        resolve(null); // Command failed
+      }
+    });
+  });
+}
+
 export function registerAppHandlers() {
+  ipcMain.handle(
+    "nodejs-status",
+    async (): Promise<{
+      nodeVersion: string | null;
+      npmVersion: string | null;
+    }> => {
+      // Run checks in parallel
+      const [nodeVersion, npmVersion] = await Promise.all([
+        checkCommandExists("node"),
+        checkCommandExists("npm"),
+      ]);
+      return { nodeVersion, npmVersion };
+    }
+  );
+
   ipcMain.handle(
     "get-app-sandbox-config",
     async (_, { appId }: { appId: number }): Promise<SandboxConfig> => {

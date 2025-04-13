@@ -8,9 +8,9 @@ import { RuntimeMode } from "@/lib/schemas";
 function formatRuntimeMode(runtimeMode: RuntimeMode | undefined) {
   switch (runtimeMode) {
     case "web-sandbox":
-      return "Sandbox";
+      return "Sandboxed";
     case "local-node":
-      return "Local";
+      return "Full Access";
     default:
       return runtimeMode;
   }
@@ -33,7 +33,7 @@ export const TitleBar = () => {
       <div className="pl-24"></div>
       <div className="hidden @md:block text-sm font-medium">{displayText}</div>
       <div className="text-sm font-medium pl-4">
-        {formatRuntimeMode(settings?.runtimeMode)} runtime
+        {formatRuntimeMode(settings?.runtimeMode)} mode
       </div>
       <div className="flex-1 text-center text-sm font-medium">Dyad</div>
     </div>

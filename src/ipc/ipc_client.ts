@@ -488,4 +488,21 @@ export class IpcClient {
       throw error;
     }
   }
+
+  // Check Node.js and npm status
+  public async getNodejsStatus(): Promise<{
+    nodeVersion: string | null;
+    npmVersion: string | null;
+  }> {
+    try {
+      const result = await this.ipcRenderer.invoke("nodejs-status");
+      return result as {
+        nodeVersion: string | null;
+        npmVersion: string | null;
+      };
+    } catch (error) {
+      showError(error);
+      throw error;
+    }
+  }
 }
