@@ -55,6 +55,39 @@ describe("getDyadWriteTags", () => {
     expect(result).toEqual([]);
   });
 
+  it("should return a dyad-write tag", () => {
+    const result =
+      getDyadWriteTags(`<dyad-write path="src/components/TodoItem.tsx" description="Creating a component for individual todo items">
+import React from "react";
+console.log("TodoItem");
+</dyad-write>`);
+    expect(result).toEqual([
+      {
+        path: "src/components/TodoItem.tsx",
+        content: `import React from \"react\";
+console.log(\"TodoItem\");`,
+      },
+    ]);
+  });
+
+  it("should strip out code fence (if needed) from a dyad-write tag", () => {
+    const result =
+      getDyadWriteTags(`<dyad-write path="src/components/TodoItem.tsx" description="Creating a component for individual todo items">
+\`\`\`tsx
+import React from "react";
+console.log("TodoItem");
+\`\`\`
+</dyad-write>
+`);
+    expect(result).toEqual([
+      {
+        path: "src/components/TodoItem.tsx",
+        content: `import React from \"react\";
+console.log(\"TodoItem\");`,
+      },
+    ]);
+  });
+
   it("should return an array of dyad-write tags", () => {
     const result = getDyadWriteTags(
       `I'll create a simple todo list app using React, TypeScript, and shadcn/ui components. Let's get started!
@@ -557,7 +590,7 @@ describe("processFullResponse", () => {
     expect(fs.writeFileSync).toHaveBeenNthCalledWith(
       3,
       "/mock/user/data/path/mock-app-path/src/components/Button.tsx",
-      "\n    import React from 'react';\n    export const Button = ({ children }) => <button>{children}</button>;\n    "
+      "import React from 'react';\n    export const Button = ({ children }) => <button>{children}</button>;"
     );
 
     // Verify git operations were called for each file

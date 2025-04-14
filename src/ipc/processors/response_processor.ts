@@ -15,7 +15,14 @@ export function getDyadWriteTags(fullResponse: string): {
   let match;
   const tags: { path: string; content: string }[] = [];
   while ((match = dyadWriteRegex.exec(fullResponse)) !== null) {
-    tags.push({ path: match[1], content: match[2] });
+    const content = match[2].trim().split("\n");
+    if (content[0].startsWith("```")) {
+      content.shift();
+    }
+    if (content[content.length - 1].startsWith("```")) {
+      content.pop();
+    }
+    tags.push({ path: match[1], content: content.join("\n") });
   }
   return tags;
 }
