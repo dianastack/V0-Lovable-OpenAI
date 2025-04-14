@@ -396,8 +396,8 @@ describe("getDyadRenameTags", () => {
 
   it("should return an array of dyad-rename tags", () => {
     const result = getDyadRenameTags(
-      `<dyad-rename from="src/components/UserProfile.jsx" to="src/components/ProfileCard.jsx" />
-      <dyad-rename from="src/utils/helpers.js" to="src/utils/utils.js" />`
+      `<dyad-rename from="src/components/UserProfile.jsx" to="src/components/ProfileCard.jsx"></dyad-rename>
+      <dyad-rename from="src/utils/helpers.js" to="src/utils/utils.js"></dyad-rename>`
     );
     expect(result).toEqual([
       {
@@ -417,8 +417,8 @@ describe("getDyadDeleteTags", () => {
 
   it("should return an array of dyad-delete paths", () => {
     const result = getDyadDeleteTags(
-      `<dyad-delete path="src/components/Analytics.jsx" />
-      <dyad-delete path="src/utils/unused.js" />`
+      `<dyad-delete path="src/components/Analytics.jsx"></dyad-delete>
+      <dyad-delete path="src/utils/unused.js"></dyad-delete>`
     );
     expect(result).toEqual([
       "src/components/Analytics.jsx",
@@ -588,7 +588,7 @@ describe("processFullResponse", () => {
     vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
     vi.mocked(fs.renameSync).mockImplementation(() => undefined);
 
-    const response = `<dyad-rename from="src/components/OldComponent.jsx" to="src/components/NewComponent.jsx" />`;
+    const response = `<dyad-rename from="src/components/OldComponent.jsx" to="src/components/NewComponent.jsx"></dyad-rename>`;
 
     const result = await processFullResponseActions(response, 1, {
       chatSummary: undefined,
@@ -620,7 +620,7 @@ describe("processFullResponse", () => {
     // Set up the mock to return false for existsSync
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
-    const response = `<dyad-rename from="src/components/NonExistent.jsx" to="src/components/NewFile.jsx" />`;
+    const response = `<dyad-rename from="src/components/NonExistent.jsx" to="src/components/NewFile.jsx"></dyad-rename>`;
 
     const result = await processFullResponseActions(response, 1, {
       chatSummary: undefined,
@@ -637,7 +637,7 @@ describe("processFullResponse", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.unlinkSync).mockImplementation(() => undefined);
 
-    const response = `<dyad-delete path="src/components/Unused.jsx" />`;
+    const response = `<dyad-delete path="src/components/Unused.jsx"></dyad-delete>`;
 
     const result = await processFullResponseActions(response, 1, {
       chatSummary: undefined,
@@ -659,7 +659,7 @@ describe("processFullResponse", () => {
     // Set up the mock to return false for existsSync
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
-    const response = `<dyad-delete path="src/components/NonExistent.jsx" />`;
+    const response = `<dyad-delete path="src/components/NonExistent.jsx"></dyad-delete>`;
 
     const result = await processFullResponseActions(response, 1, {
       chatSummary: undefined,
@@ -681,8 +681,8 @@ describe("processFullResponse", () => {
 
     const response = `
     <dyad-write path="src/components/NewComponent.jsx">import React from 'react'; export default () => <div>New</div>;</dyad-write>
-    <dyad-rename from="src/components/OldComponent.jsx" to="src/components/RenamedComponent.jsx" />
-    <dyad-delete path="src/components/Unused.jsx" />
+    <dyad-rename from="src/components/OldComponent.jsx" to="src/components/RenamedComponent.jsx"></dyad-rename>
+    <dyad-delete path="src/components/Unused.jsx"></dyad-delete>
     `;
 
     const result = await processFullResponseActions(response, 1, {
