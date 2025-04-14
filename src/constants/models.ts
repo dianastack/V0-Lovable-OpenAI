@@ -9,9 +9,9 @@ export interface ModelOption {
 export const MODEL_OPTIONS: Record<ModelProvider, ModelOption[]> = {
   openai: [
     {
-      name: "gpt-4o",
-      displayName: "GPT 4o",
-      description: "Latest GPT-4 model optimized for performance",
+      name: "gpt-4.1",
+      displayName: "GPT 4.1",
+      description: "OpenAI's flagship model",
     },
     {
       name: "o3-mini",
