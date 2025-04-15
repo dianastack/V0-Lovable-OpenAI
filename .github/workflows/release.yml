@@ -12,6 +12,9 @@ jobs:
   build:
     environment: release
     strategy:
+      # Do it sequentially to avoid a race condition where multiple release drafts
+      # for the same version are created in parallel.
+      max-parallel: 1
       matrix:
         os: [
             # { name: "linux", image: "ubuntu-latest" },
