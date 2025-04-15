@@ -27,6 +27,8 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
+      - name: add macos cert
+        run: chmod +x tools/add-macos-cert.sh && . ./tools/add-macos-cert.sh
       - name: Publish app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
