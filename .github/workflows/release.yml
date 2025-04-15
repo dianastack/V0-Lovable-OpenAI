@@ -28,6 +28,8 @@ jobs:
           node-version: 20
       - run: npm ci
       - name: add macos cert
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
         run: chmod +x tools/add-macos-cert.sh && . ./tools/add-macos-cert.sh
       - name: Publish app
         env:
