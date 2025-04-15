@@ -8,6 +8,9 @@
     "type": "git",
     "url": "https://github.com/dyad-sh/dyad.git"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "electron-forge start",
     "package": "rm -rf out && rm -rf scaffold/node_modules && electron-forge package",
