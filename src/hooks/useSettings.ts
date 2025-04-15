@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAtom } from "jotai";
 import { userSettingsAtom, envVarsAtom } from "@/atoms/appAtoms";
 import { IpcClient } from "@/ipc/ipc_client";
@@ -18,31 +18,30 @@ export function useSettings() {
   const [envVars, setEnvVarsAtom] = useAtom(envVarsAtom);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const loadInitialData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const ipcClient = IpcClient.getInstance();
+      // Fetch settings and env vars concurrently
+      const [userSettings, fetchedEnvVars] = await Promise.all([
+        ipcClient.getUserSettings(),
+        ipcClient.getEnvVars(),
+      ]);
+      setSettingsAtom(userSettings);
+      setEnvVarsAtom(fetchedEnvVars);
+      setError(null);
+    } catch (error) {
+      console.error("Error loading initial data:", error);
+      setError(error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      setLoading(false);
+    }
+  }, [setSettingsAtom, setEnvVarsAtom]);
 
   useEffect(() => {
-    const loadInitialData = async () => {
-      setLoading(true);
-      try {
-        const ipcClient = IpcClient.getInstance();
-        // Fetch settings and env vars concurrently
-        const [userSettings, fetchedEnvVars] = await Promise.all([
-          ipcClient.getUserSettings(),
-          ipcClient.getEnvVars(),
-        ]);
-        setSettingsAtom(userSettings);
-        setEnvVarsAtom(fetchedEnvVars);
-        setError(null);
-      } catch (error) {
-        console.error("Error loading initial data:", error);
-        setError(error instanceof Error ? error : new Error(String(error)));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadInitialData();
     // Only run once on mount, dependencies are stable getters/setters
-  }, [setSettingsAtom, setEnvVarsAtom]);
+    loadInitialData();
+  }, [loadInitialData]);
 
   const updateSettings = async (newSettings: Partial<UserSettings>) => {
     setLoading(true);
@@ -83,6 +82,9 @@ export function useSettings() {
       return Object.keys(PROVIDER_TO_ENV_VAR).some((provider) =>
         isProviderSetup(provider)
       );
+    },
+    refreshSettings: () => {
+      loadInitialData();
     },
   };
 }

@@ -3,7 +3,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { appBasePathAtom, appsListAtom } from "@/atoms/appAtoms";
 import { IpcClient } from "@/ipc/ipc_client";
 import { useLoadApps } from "@/hooks/useLoadApps";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
   ArrowRight,
   MessageCircle,
   Pencil,
+  Github,
 } from "lucide-react";
 import {
   Popover,
@@ -26,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { GitHubConnector } from "@/components/GitHubConnector";
 
 export default function AppDetailsPage() {
   const navigate = useNavigate();
@@ -225,7 +227,7 @@ export default function AppDetailsPage() {
             </span>
           </div>
         </div>
-        <div className="mt-8 flex gap-4">
+        <div className="mt-8 flex flex-col gap-4">
           <Button
             onClick={() =>
               appId && navigate({ to: "/chat", search: { id: appId } })
@@ -236,6 +238,7 @@ export default function AppDetailsPage() {
             Open in Chat
             <MessageCircle className="h-5 w-5" />
           </Button>
+          <GitHubConnector appId={appId} />
         </div>
 
         {/* Rename Dialog */}

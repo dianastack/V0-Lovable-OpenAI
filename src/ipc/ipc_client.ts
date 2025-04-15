@@ -29,6 +29,20 @@ export interface AppStreamCallbacks {
   onOutput: (output: AppOutput) => void;
 }
 
+export interface GitHubDeviceFlowUpdateData {
+  userCode?: string;
+  verificationUri?: string;
+  message?: string;
+}
+
+export interface GitHubDeviceFlowSuccessData {
+  message?: string;
+}
+
+export interface GitHubDeviceFlowErrorData {
+  error: string;
+}
+
 export class IpcClient {
   private static instance: IpcClient;
   private ipcRenderer: IpcRenderer;
@@ -505,4 +519,58 @@ export class IpcClient {
       throw error;
     }
   }
+
+  // --- GitHub Device Flow ---
+  public startGithubDeviceFlow(appId: number | null): void {
+    this.ipcRenderer.invoke("github:start-flow", { appId });
+  }
+
+  public onGithubDeviceFlowUpdate(
+    callback: (data: GitHubDeviceFlowUpdateData) => void
+  ): () => void {
+    const listener = (data: any) => {
+      console.log("github:flow-update", data);
+      callback(data as GitHubDeviceFlowUpdateData);
+    };
+    this.ipcRenderer.on("github:flow-update", listener);
+    // Return a function to remove the listener
+    return () => {
+      this.ipcRenderer.removeListener("github:flow-update", listener);
+    };
+  }
+
+  public onGithubDeviceFlowSuccess(
+    callback: (data: GitHubDeviceFlowSuccessData) => void
+  ): () => void {
+    const listener = (data: any) => {
+      console.log("github:flow-success", data);
+      callback(data as GitHubDeviceFlowSuccessData);
+    };
+    this.ipcRenderer.on("github:flow-success", listener);
+    return () => {
+      this.ipcRenderer.removeListener("github:flow-success", listener);
+    };
+  }
+
+  public onGithubDeviceFlowError(
+    callback: (data: GitHubDeviceFlowErrorData) => void
+  ): () => void {
+    const listener = (data: any) => {
+      console.log("github:flow-error", data);
+      callback(data as GitHubDeviceFlowErrorData);
+    };
+    this.ipcRenderer.on("github:flow-error", listener);
+    return () => {
+      this.ipcRenderer.removeListener("github:flow-error", listener);
+    };
+  }
+
+  // TODO: Implement cancel method if needed
+  // public cancelGithubDeviceFlow(): void {
+  //   this.ipcRenderer.sendMessage("github:cancel-flow");
+  // }
+  // --- End GitHub Device Flow ---
+
+  // Example methods for listening to events (if needed)
+  // public on(channel: string, func: (...args: any[]) => void): void {
 }

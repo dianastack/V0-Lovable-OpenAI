@@ -32,6 +32,7 @@ const validInvokeChannels = [
   "open-external-url",
   "reset-all",
   "nodejs-status",
+  "github:start-flow",
 ] as const;
 
 // Add valid receive channels
@@ -40,6 +41,9 @@ const validReceiveChannels = [
   "chat:response:end",
   "chat:response:error",
   "app:output",
+  "github:flow-update",
+  "github:flow-success",
+  "github:flow-error",
 ] as const;
 
 type ValidInvokeChannel = (typeof validInvokeChannels)[number];
@@ -74,6 +78,14 @@ contextBridge.exposeInMainWorld("electron", {
     removeAllListeners: (channel: ValidReceiveChannel) => {
       if (validReceiveChannels.includes(channel)) {
         ipcRenderer.removeAllListeners(channel);
+      }
+    },
+    removeListener: (
+      channel: ValidReceiveChannel,
+      listener: (...args: unknown[]) => void
+    ) => {
+      if (validReceiveChannels.includes(channel)) {
+        ipcRenderer.removeListener(channel, listener);
       }
     },
   },
