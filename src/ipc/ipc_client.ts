@@ -617,6 +617,17 @@ export class IpcClient {
   }
   // --- End GitHub Repo Management ---
 
+  // Get the main app version
+  public async getAppVersion(): Promise<string> {
+    try {
+      const result = await this.ipcRenderer.invoke("get-app-version");
+      return result.version as string;
+    } catch (error) {
+      showError(error);
+      throw error;
+    }
+  }
+
   // Example methods for listening to events (if needed)
   // public on(channel: string, func: (...args: any[]) => void): void {
 }

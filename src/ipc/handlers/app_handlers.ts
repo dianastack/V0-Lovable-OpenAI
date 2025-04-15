@@ -1071,4 +1071,11 @@ export function registerAppHandlers() {
 
     return { success: true, message: "Successfully reset everything" };
   });
+
+  ipcMain.handle("get-app-version", async () => {
+    // Read version from package.json at project root
+    const packageJsonPath = path.resolve(__dirname, "..", "..", "package.json");
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+    return { version: packageJson.version };
+  });
 }
