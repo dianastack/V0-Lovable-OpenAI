@@ -7,6 +7,14 @@ import {
 import fetch from "node-fetch"; // Use node-fetch for making HTTP requests in main process
 import { writeSettings, readSettings } from "../../main/settings";
 import { updateAppGithubRepo } from "../../db/index";
+import git from "isomorphic-git";
+import http from "isomorphic-git/http/node";
+import path from "node:path";
+import fs from "node:fs";
+import { getDyadAppPath } from "../../paths/paths";
+import { db } from "../../db";
+import { apps } from "../../db/schema";
+import { eq } from "drizzle-orm";
 
 // --- GitHub Device Flow Constants ---
 // TODO: Fetch this securely, e.g., from environment variables or a config file
@@ -363,10 +371,57 @@ async function handleCreateRepo(
   }
 }
 
+// --- GitHub Push Handler ---
+async function handlePushToGithub(
+  event: IpcMainInvokeEvent,
+  { appId }: { appId: number }
+) {
+  try {
+    // Get access token from settings
+    const settings = readSettings();
+    const accessToken = settings.githubSettings?.secrets?.accessToken;
+    if (!accessToken) {
+      return { success: false, error: "Not authenticated with GitHub." };
+    }
+    // Get app info from DB
+    const app = await db.query.apps.findFirst({ where: eq(apps.id, appId) });
+    if (!app || !app.githubOrg || !app.githubRepo) {
+      return { success: false, error: "App is not linked to a GitHub repo." };
+    }
+    const appPath = getDyadAppPath(app.path);
+    // Set up remote URL with token
+    const remoteUrl = `https://${accessToken}:x-oauth-basic@github.com/${app.githubOrg}/${app.githubRepo}.git`;
+    // Set or update remote URL using git config
+    await git.setConfig({
+      fs,
+      dir: appPath,
+      path: "remote.origin.url",
+      value: remoteUrl,
+    });
+    // Push to GitHub
+    await git.push({
+      fs,
+      http,
+      dir: appPath,
+      remote: "origin",
+      ref: "main",
+      onAuth: () => ({ username: accessToken, password: "x-oauth-basic" }),
+      force: false,
+    });
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || "Failed to push to GitHub.",
+    };
+  }
+}
+
 // --- Registration ---
 export function registerGithubHandlers() {
   ipcMain.handle("github:start-flow", handleStartGithubFlow);
   // ipcMain.on('github:cancel-flow', handleCancelGithubFlow); // Uncomment if you add cancellation
   ipcMain.handle("github:is-repo-available", handleIsRepoAvailable);
   ipcMain.handle("github:create-repo", handleCreateRepo);
+  ipcMain.handle("github:push", handlePushToGithub);
 }

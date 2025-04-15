@@ -35,6 +35,7 @@ const validInvokeChannels = [
   "github:start-flow",
   "github:is-repo-available",
   "github:create-repo",
+  "github:push",
 ] as const;
 
 // Add valid receive channels

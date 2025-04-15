@@ -117,7 +117,10 @@ export function GitHubConnector({ appId, folderName }: GitHubConnectorProps) {
   const [isCreatingRepo, setIsCreatingRepo] = useState(false);
   const [createRepoError, setCreateRepoError] = useState<string | null>(null);
   const [createRepoSuccess, setCreateRepoSuccess] = useState<boolean>(false);
-
+  // --- Sync to GitHub State ---
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncSuccess, setSyncSuccess] = useState<boolean>(false);
   // Assume org is the authenticated user for now (could add org input later)
   // TODO: After device flow, fetch and store the GitHub username/org in settings for use here
   const githubOrg = ""; // Use empty string for now (GitHub API will default to the authenticated user)
@@ -169,6 +172,24 @@ export function GitHubConnector({ appId, folderName }: GitHubConnectorProps) {
   };
 
   if (app?.githubOrg && app?.githubRepo) {
+    const handleSyncToGithub = async () => {
+      setIsSyncing(true);
+      setSyncError(null);
+      setSyncSuccess(false);
+      try {
+        const result = await IpcClient.getInstance().syncGithubRepo(appId!);
+        if (result.success) {
+          setSyncSuccess(true);
+        } else {
+          setSyncError(result.error || "Failed to sync to GitHub.");
+        }
+      } catch (err: any) {
+        setSyncError(err.message || "Failed to sync to GitHub.");
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
     return (
       <div className="mt-4 w-full border border-gray-200 rounded-md p-4">
         <p>Connected to GitHub Repo:</p>
@@ -185,6 +206,42 @@ export function GitHubConnector({ appId, folderName }: GitHubConnectorProps) {
         >
           {app.githubOrg}/{app.githubRepo}
         </a>
+        <div className="mt-2">
+          <Button onClick={handleSyncToGithub} disabled={isSyncing}>
+            {isSyncing ? (
+              <>
+                <svg
+                  className="animate-spin h-5 w-5 mr-2 inline"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  style={{ display: "inline" }}
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Syncing...
+              </>
+            ) : (
+              "Sync to GitHub"
+            )}
+          </Button>
+        </div>
+        {syncError && <p className="text-red-600 mt-2">{syncError}</p>}
+        {syncSuccess && (
+          <p className="text-green-600 mt-2">Successfully pushed to GitHub!</p>
+        )}
       </div>
     );
   }

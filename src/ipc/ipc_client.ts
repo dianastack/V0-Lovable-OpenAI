@@ -603,6 +603,18 @@ export class IpcClient {
       return { success: false, error: error.message || "Unknown error" };
     }
   }
+
+  // Sync (push) local repo to GitHub
+  public async syncGithubRepo(
+    appId: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await this.ipcRenderer.invoke("github:push", { appId });
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message || "Unknown error" };
+    }
+  }
   // --- End GitHub Repo Management ---
 
   // Example methods for listening to events (if needed)
