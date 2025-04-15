@@ -3,6 +3,7 @@ import path from "node:path";
 import { getUserDataPath } from "../paths/paths";
 import { UserSettingsSchema, type UserSettings } from "../lib/schemas";
 import { safeStorage } from "electron";
+
 const DEFAULT_SETTINGS: UserSettings = {
   selectedModel: {
     name: "auto",

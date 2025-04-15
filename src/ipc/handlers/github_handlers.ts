@@ -15,6 +15,7 @@ import { getDyadAppPath } from "../../paths/paths";
 import { db } from "../../db";
 import { apps } from "../../db/schema";
 import { eq } from "drizzle-orm";
+import { GithubUser } from "../../lib/schemas";
 
 // --- GitHub Device Flow Constants ---
 // TODO: Fetch this securely, e.g., from environment variables or a config file
@@ -37,6 +38,37 @@ interface DeviceFlowState {
 let currentFlowState: DeviceFlowState | null = null;
 
 // --- Helper Functions ---
+
+/**
+ * Fetches the GitHub username of the currently authenticated user (using the stored access token).
+ * @returns {Promise<string|null>} The GitHub username, or null if not authenticated or on error.
+ */
+export async function getGithubUser(): Promise<GithubUser | null> {
+  const settings = readSettings();
+  const email = settings.githubUser?.email;
+  if (email) return { email };
+  try {
+    const accessToken = settings.githubSettings?.secrets?.accessToken;
+    if (!accessToken) return null;
+    const res = await fetch("https://api.github.com/user/emails", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const emails = await res.json();
+    const email = emails.find((e: any) => e.primary)?.email;
+    if (!email) return null;
+
+    writeSettings({
+      githubUser: {
+        email,
+      },
+    });
+    return { email };
+  } catch (err) {
+    console.error("[GitHub Handler] Failed to get GitHub username:", err);
+    return null;
+  }
+}
 
 // function event.sender.send(channel: string, data: any) {
 //   if (currentFlowState?.window && !currentFlowState.window.isDestroyed()) {

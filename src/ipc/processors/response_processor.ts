@@ -5,6 +5,8 @@ import fs from "node:fs";
 import { getDyadAppPath } from "../../paths/paths";
 import path from "node:path";
 import git from "isomorphic-git";
+import { getGithubUser } from "../handlers/github_handlers";
+import { getGitAuthor } from "../utils/git_author";
 
 export function getDyadWriteTags(fullResponse: string): {
   path: string;
@@ -210,10 +212,7 @@ export async function processFullResponseActions(
         message: chatSummary
           ? `[dyad] ${chatSummary} - ${changes.join(", ")}`
           : `[dyad] ${changes.join(", ")}`,
-        author: {
-          name: "Dyad AI",
-          email: "dyad-ai@example.com",
-        },
+        author: await getGitAuthor(),
       });
       console.log(`Successfully committed changes: ${changes.join(", ")}`);
       return { updatedFiles: true };

@@ -74,6 +74,11 @@ export const GitHubSettingsSchema = z.object({
 });
 export type GitHubSettings = z.infer<typeof GitHubSettingsSchema>;
 
+export const GithubUserSchema = z.object({
+  email: z.string(),
+});
+export type GithubUser = z.infer<typeof GithubUserSchema>;
+
 /**
  * Zod schema for user settings
  */
@@ -82,6 +87,7 @@ export const UserSettingsSchema = z.object({
   providerSettings: z.record(z.string(), ProviderSettingSchema),
   runtimeMode: RuntimeModeSchema,
   githubSettings: GitHubSettingsSchema,
+  githubUser: GithubUserSchema.optional(),
 });
 
 /**

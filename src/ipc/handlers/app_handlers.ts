@@ -33,6 +33,7 @@ import { getEnvVar } from "../utils/read_env";
 import { readSettings } from "../../main/settings";
 import { Worker } from "worker_threads";
 import fixPath from "fix-path";
+import { getGitAuthor } from "../utils/git_author";
 
 // Needed, otherwise electron in MacOS/Linux will not be able
 // to find "npm".
@@ -346,10 +347,7 @@ export function registerAppHandlers() {
         fs: fs,
         dir: fullAppPath,
         message: "Init from react vite template",
-        author: {
-          name: "Dyad",
-          email: "dyad@example.com",
-        },
+        author: await getGitAuthor(),
       });
     } catch (error) {
       console.error("Error in background app initialization:", error);
@@ -708,10 +706,7 @@ export function registerAppHandlers() {
             fs,
             dir: appPath,
             message: `Reverted all changes back to version ${previousVersionId}`,
-            author: {
-              name: "Dyad",
-              email: "hi@dyad.sh",
-            },
+            author: await getGitAuthor(),
           });
 
           return { success: true };
@@ -845,10 +840,7 @@ export function registerAppHandlers() {
             fs,
             dir: appPath,
             message: `Updated ${filePath}`,
-            author: {
-              name: "Dyad",
-              email: "hi@dyad.sh",
-            },
+            author: await getGitAuthor(),
           });
         }
 
