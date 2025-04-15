@@ -20,11 +20,7 @@ export function registerSettingsHandlers() {
         ) {
           const providerSetting = settings.providerSettings[providerKey];
           // Check if apiKey exists and is a non-empty string before masking
-          if (
-            providerSetting?.apiKey &&
-            typeof providerSetting.apiKey === "string" &&
-            providerSetting.apiKey.length > 0
-          ) {
+          if (providerSetting?.apiKey?.value) {
             providerSetting.apiKey = providerSetting.apiKey;
           }
         }

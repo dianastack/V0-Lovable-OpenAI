@@ -48,7 +48,7 @@ export async function getGithubUser(): Promise<GithubUser | null> {
   const email = settings.githubUser?.email;
   if (email) return { email };
   try {
-    const accessToken = settings.githubSettings?.secrets?.accessToken;
+    const accessToken = settings.githubAccessToken?.value;
     if (!accessToken) return null;
     const res = await fetch("https://api.github.com/user/emails", {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -116,10 +116,8 @@ async function pollForAccessToken(event: IpcMainInvokeEvent) {
         message: "Successfully connected!",
       });
       writeSettings({
-        githubSettings: {
-          secrets: {
-            accessToken: data.access_token,
-          },
+        githubAccessToken: {
+          value: data.access_token,
         },
       });
       // TODO: Associate token with appId if provided
@@ -324,7 +322,7 @@ async function handleIsRepoAvailable(
   try {
     // Get access token from settings
     const settings = readSettings();
-    const accessToken = settings.githubSettings?.secrets?.accessToken;
+    const accessToken = settings.githubAccessToken?.value;
     if (!accessToken) {
       return { available: false, error: "Not authenticated with GitHub." };
     }
@@ -362,7 +360,7 @@ async function handleCreateRepo(
   try {
     // Get access token from settings
     const settings = readSettings();
-    const accessToken = settings.githubSettings?.secrets?.accessToken;
+    const accessToken = settings.githubAccessToken?.value;
     if (!accessToken) {
       return { success: false, error: "Not authenticated with GitHub." };
     }
@@ -411,7 +409,7 @@ async function handlePushToGithub(
   try {
     // Get access token from settings
     const settings = readSettings();
-    const accessToken = settings.githubSettings?.secrets?.accessToken;
+    const accessToken = settings.githubAccessToken?.value;
     if (!accessToken) {
       return { success: false, error: "Not authenticated with GitHub." };
     }
@@ -437,7 +435,10 @@ async function handlePushToGithub(
       dir: appPath,
       remote: "origin",
       ref: "main",
-      onAuth: () => ({ username: accessToken, password: "x-oauth-basic" }),
+      onAuth: () => ({
+        username: accessToken,
+        password: "x-oauth-basic",
+      }),
       force: false,
     });
     return { success: true };

@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getUserDataPath } from "../paths/paths";
-import { UserSettingsSchema, type UserSettings } from "../lib/schemas";
+import { UserSettingsSchema, type UserSettings, Secret } from "../lib/schemas";
 import { safeStorage } from "electron";
 
+// IF YOU NEED TO UPDATE THIS, YOU'RE PROBABLY DOING SOMETHING WRONG!
+// Need to maintain backwards compatibility!
 const DEFAULT_SETTINGS: UserSettings = {
   selectedModel: {
     name: "auto",
@@ -11,9 +13,6 @@ const DEFAULT_SETTINGS: UserSettings = {
   },
   providerSettings: {},
   runtimeMode: "unset",
-  githubSettings: {
-    secrets: null,
-  },
 };
 
 const SETTINGS_FILE = "user-settings.json";
@@ -30,18 +29,31 @@ export function readSettings(): UserSettings {
       return DEFAULT_SETTINGS;
     }
     const rawSettings = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    // Validate and merge with defaults
-    const validatedSettings = UserSettingsSchema.parse({
+    const combinedSettings: UserSettings = {
       ...DEFAULT_SETTINGS,
       ...rawSettings,
-    });
-    if (validatedSettings.githubSettings?.secrets) {
-      const accessToken = validatedSettings.githubSettings.secrets.accessToken;
-
-      validatedSettings.githubSettings.secrets = {
-        accessToken: accessToken ? decrypt(accessToken) : null,
+    };
+    if (combinedSettings.githubAccessToken) {
+      const encryptionType = combinedSettings.githubAccessToken.encryptionType;
+      combinedSettings.githubAccessToken = {
+        value: decrypt(combinedSettings.githubAccessToken),
+        encryptionType,
       };
     }
+    for (const provider in combinedSettings.providerSettings) {
+      if (combinedSettings.providerSettings[provider].apiKey) {
+        const encryptionType =
+          combinedSettings.providerSettings[provider].apiKey.encryptionType;
+        combinedSettings.providerSettings[provider].apiKey = {
+          value: decrypt(combinedSettings.providerSettings[provider].apiKey),
+          encryptionType,
+        };
+      }
+    }
+
+    // Validate and merge with defaults
+    const validatedSettings = UserSettingsSchema.parse(combinedSettings);
+
     return validatedSettings;
   } catch (error) {
     console.error("Error reading settings:", error);
@@ -54,30 +66,42 @@ export function writeSettings(settings: Partial<UserSettings>): void {
     const filePath = getSettingsFilePath();
     const currentSettings = readSettings();
     const newSettings = { ...currentSettings, ...settings };
-    // Validate before writing
-    const validatedSettings = UserSettingsSchema.parse(newSettings);
-    if (validatedSettings.githubSettings?.secrets) {
-      const accessToken = validatedSettings.githubSettings.secrets.accessToken;
-      validatedSettings.githubSettings.secrets = {
-        accessToken: accessToken ? encrypt(accessToken) : null,
-      };
+    if (newSettings.githubAccessToken) {
+      newSettings.githubAccessToken = encrypt(
+        newSettings.githubAccessToken.value
+      );
     }
+
+    for (const provider in newSettings.providerSettings) {
+      if (newSettings.providerSettings[provider].apiKey) {
+        newSettings.providerSettings[provider].apiKey = encrypt(
+          newSettings.providerSettings[provider].apiKey.value
+        );
+      }
+    }
+    const validatedSettings = UserSettingsSchema.parse(newSettings);
     fs.writeFileSync(filePath, JSON.stringify(validatedSettings, null, 2));
   } catch (error) {
     console.error("Error writing settings:", error);
   }
 }
 
-export function encrypt(data: string): string {
+export function encrypt(data: string): Secret {
   if (safeStorage.isEncryptionAvailable()) {
-    return safeStorage.encryptString(data).toString("base64");
+    return {
+      value: safeStorage.encryptString(data).toString("base64"),
+      encryptionType: "electron-safe-storage",
+    };
   }
-  return data;
+  return {
+    value: data,
+    encryptionType: "plaintext",
+  };
 }
 
-export function decrypt(data: string): string {
-  if (safeStorage.isEncryptionAvailable()) {
-    return safeStorage.decryptString(Buffer.from(data, "base64"));
+export function decrypt(data: Secret): string {
+  if (data.encryptionType === "electron-safe-storage") {
+    return safeStorage.decryptString(Buffer.from(data.value, "base64"));
   }
-  return data;
+  return data.value;
 }

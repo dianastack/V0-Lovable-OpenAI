@@ -37,7 +37,7 @@ export function getModelClient(
   }
 
   const apiKey =
-    settings.providerSettings?.[model.provider]?.apiKey ||
+    settings.providerSettings?.[model.provider]?.apiKey?.value ||
     getEnvVar(PROVIDER_TO_ENV_VAR[model.provider]);
   switch (model.provider) {
     case "openai": {

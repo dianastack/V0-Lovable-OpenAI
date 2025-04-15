@@ -59,7 +59,7 @@ export function ProviderSettingsPage({ provider }: ProviderSettingsPageProps) {
 
   const envVarName = PROVIDER_TO_ENV_VAR[provider];
   const envApiKey = envVars[envVarName];
-  const userApiKey = settings?.providerSettings?.[provider]?.apiKey;
+  const userApiKey = settings?.providerSettings?.[provider]?.apiKey?.value;
 
   // --- Configuration Logic --- Updated Priority ---
   const isValidUserKey =
@@ -100,7 +100,9 @@ export function ProviderSettingsPage({ provider }: ProviderSettingsPageProps) {
           ...settings?.providerSettings,
           [provider]: {
             ...(settings?.providerSettings?.[provider] || {}),
-            apiKey: apiKeyInput,
+            apiKey: {
+              value: apiKeyInput,
+            },
           },
         },
       });
@@ -124,7 +126,7 @@ export function ProviderSettingsPage({ provider }: ProviderSettingsPageProps) {
           ...settings?.providerSettings,
           [provider]: {
             ...(settings?.providerSettings?.[provider] || {}),
-            apiKey: null,
+            apiKey: undefined,
           },
         },
       });

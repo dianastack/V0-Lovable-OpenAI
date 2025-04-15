@@ -171,7 +171,7 @@ export function GitHubConnector({ appId, folderName }: GitHubConnectorProps) {
     }
   };
 
-  if (!settings?.githubSettings.secrets?.accessToken) {
+  if (!settings?.githubAccessToken) {
     return (
       <div className="mt-4 w-full">
         {" "}
