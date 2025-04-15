@@ -571,6 +571,40 @@ export class IpcClient {
   // }
   // --- End GitHub Device Flow ---
 
+  // --- GitHub Repo Management ---
+  public async checkGithubRepoAvailable(
+    org: string,
+    repo: string
+  ): Promise<{ available: boolean; error?: string }> {
+    try {
+      const result = await this.ipcRenderer.invoke("github:is-repo-available", {
+        org,
+        repo,
+      });
+      return result;
+    } catch (error: any) {
+      return { available: false, error: error.message || "Unknown error" };
+    }
+  }
+
+  public async createGithubRepo(
+    org: string,
+    repo: string,
+    appId: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await this.ipcRenderer.invoke("github:create-repo", {
+        org,
+        repo,
+        appId,
+      });
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message || "Unknown error" };
+    }
+  }
+  // --- End GitHub Repo Management ---
+
   // Example methods for listening to events (if needed)
   // public on(channel: string, func: (...args: any[]) => void): void {
 }

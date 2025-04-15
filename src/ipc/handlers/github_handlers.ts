@@ -5,7 +5,8 @@ import {
   IpcMainInvokeEvent,
 } from "electron";
 import fetch from "node-fetch"; // Use node-fetch for making HTTP requests in main process
-import { writeSettings } from "../../main/settings";
+import { writeSettings, readSettings } from "../../main/settings";
+import { updateAppGithubRepo } from "../../db/index";
 
 // --- GitHub Device Flow Constants ---
 // TODO: Fetch this securely, e.g., from environment variables or a config file
@@ -275,8 +276,97 @@ function handleStartGithubFlow(
 //   event.sender.send('github:flow-cancelled', { message: 'GitHub flow cancelled.' });
 // }
 
+// --- GitHub Repo Availability Handler ---
+async function handleIsRepoAvailable(
+  event: IpcMainInvokeEvent,
+  { org, repo }: { org: string; repo: string }
+) {
+  try {
+    // Get access token from settings
+    const settings = readSettings();
+    const accessToken = settings.githubSettings?.secrets?.accessToken;
+    if (!accessToken) {
+      return { available: false, error: "Not authenticated with GitHub." };
+    }
+    // If org is empty, use the authenticated user
+    const owner =
+      org ||
+      (await fetch("https://api.github.com/user", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+        .then((r) => r.json())
+        .then((u) => u.login));
+    // Check if repo exists
+    const url = `https://api.github.com/repos/${owner}/${repo}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (res.status === 404) {
+      return { available: true };
+    } else if (res.ok) {
+      return { available: false, error: "Repository already exists." };
+    } else {
+      const data = await res.json();
+      return { available: false, error: data.message || "Unknown error" };
+    }
+  } catch (err: any) {
+    return { available: false, error: err.message || "Unknown error" };
+  }
+}
+
+// --- GitHub Create Repo Handler ---
+async function handleCreateRepo(
+  event: IpcMainInvokeEvent,
+  { org, repo, appId }: { org: string; repo: string; appId: number }
+) {
+  try {
+    // Get access token from settings
+    const settings = readSettings();
+    const accessToken = settings.githubSettings?.secrets?.accessToken;
+    if (!accessToken) {
+      return { success: false, error: "Not authenticated with GitHub." };
+    }
+    // If org is empty, create for the authenticated user
+    let owner = org;
+    if (!owner) {
+      const userRes = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const user = await userRes.json();
+      owner = user.login;
+    }
+    // Create repo
+    const createUrl = org
+      ? `https://api.github.com/orgs/${owner}/repos`
+      : `https://api.github.com/user/repos`;
+    const res = await fetch(createUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/vnd.github+json",
+      },
+      body: JSON.stringify({
+        name: repo,
+        private: true,
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      return { success: false, error: data.message || "Failed to create repo" };
+    }
+    // Store org and repo in the app's DB row (apps table)
+    await updateAppGithubRepo(appId, owner, repo);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Unknown error" };
+  }
+}
+
 // --- Registration ---
 export function registerGithubHandlers() {
   ipcMain.handle("github:start-flow", handleStartGithubFlow);
   // ipcMain.on('github:cancel-flow', handleCancelGithubFlow); // Uncomment if you add cancellation
+  ipcMain.handle("github:is-repo-available", handleIsRepoAvailable);
+  ipcMain.handle("github:create-repo", handleCreateRepo);
 }

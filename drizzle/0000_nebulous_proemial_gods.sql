@@ -3,7 +3,9 @@ CREATE TABLE `apps` (
 	`name` text NOT NULL,
 	`path` text NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`github_org` text,
+	`github_repo` text
 );
 --> statement-breakpoint
 CREATE TABLE `chats` (

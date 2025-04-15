@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8551dcbc-91d8-4b82-afc4-9c4b6684de3a",
+  "id": "1a0ffcb3-606d-4b03-81b7-7c585555a548",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "apps": {
@@ -43,6 +43,20 @@
           "notNull": true,
           "autoincrement": false,
           "default": "(unixepoch())"
+        },
+        "github_org": {
+          "name": "github_org",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "github_repo": {
+          "name": "github_repo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},

@@ -33,6 +33,8 @@ const validInvokeChannels = [
   "reset-all",
   "nodejs-status",
   "github:start-flow",
+  "github:is-repo-available",
+  "github:create-repo",
 ] as const;
 
 // Add valid receive channels

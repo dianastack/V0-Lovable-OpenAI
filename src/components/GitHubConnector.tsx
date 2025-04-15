@@ -3,13 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Github } from "lucide-react";
 import { IpcClient } from "@/ipc/ipc_client";
 import { useSettings } from "@/hooks/useSettings";
+import { useLoadApp } from "@/hooks/useLoadApp";
 
 interface GitHubConnectorProps {
   appId: number | null;
+  folderName: string;
 }
 
-export function GitHubConnector({ appId }: GitHubConnectorProps) {
+export function GitHubConnector({ appId, folderName }: GitHubConnectorProps) {
   // --- GitHub Device Flow State ---
+  const { app, refreshApp } = useLoadApp(appId);
   const { settings, refreshSettings } = useSettings();
   const [githubUserCode, setGithubUserCode] = useState<string | null>(null);
   const [githubVerificationUri, setGithubVerificationUri] = useState<
@@ -106,10 +109,127 @@ export function GitHubConnector({ appId }: GitHubConnectorProps) {
     };
   }, [appId]); // Re-run effect if appId changes
 
+  // --- Create Repo State ---
+  const [repoName, setRepoName] = useState(folderName);
+  const [repoAvailable, setRepoAvailable] = useState<boolean | null>(null);
+  const [repoCheckError, setRepoCheckError] = useState<string | null>(null);
+  const [isCheckingRepo, setIsCheckingRepo] = useState(false);
+  const [isCreatingRepo, setIsCreatingRepo] = useState(false);
+  const [createRepoError, setCreateRepoError] = useState<string | null>(null);
+  const [createRepoSuccess, setCreateRepoSuccess] = useState<boolean>(false);
+
+  // Assume org is the authenticated user for now (could add org input later)
+  // TODO: After device flow, fetch and store the GitHub username/org in settings for use here
+  const githubOrg = ""; // Use empty string for now (GitHub API will default to the authenticated user)
+
+  const handleRepoNameBlur = async () => {
+    setRepoCheckError(null);
+    setRepoAvailable(null);
+    if (!repoName) return;
+    setIsCheckingRepo(true);
+    try {
+      const result = await IpcClient.getInstance().checkGithubRepoAvailable(
+        githubOrg,
+        repoName
+      );
+      setRepoAvailable(result.available);
+      if (!result.available) {
+        setRepoCheckError(result.error || "Repository name is not available.");
+      }
+    } catch (err: any) {
+      setRepoCheckError(err.message || "Failed to check repo availability.");
+    } finally {
+      setIsCheckingRepo(false);
+    }
+  };
+
+  const handleCreateRepo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateRepoError(null);
+    setIsCreatingRepo(true);
+    setCreateRepoSuccess(false);
+    try {
+      const result = await IpcClient.getInstance().createGithubRepo(
+        githubOrg,
+        repoName,
+        appId!
+      );
+      if (result.success) {
+        setCreateRepoSuccess(true);
+        setRepoCheckError(null);
+        refreshApp();
+      } else {
+        setCreateRepoError(result.error || "Failed to create repository.");
+      }
+    } catch (err: any) {
+      setCreateRepoError(err.message || "Failed to create repository.");
+    } finally {
+      setIsCreatingRepo(false);
+    }
+  };
+
+  if (app?.githubOrg && app?.githubRepo) {
+    return (
+      <div className="mt-4 w-full border border-gray-200 rounded-md p-4">
+        <p>Connected to GitHub Repo:</p>
+        <a
+          onClick={(e) => {
+            e.preventDefault();
+            IpcClient.getInstance().openExternalUrl(
+              `https://github.com/${app.githubOrg}/${app.githubRepo}`
+            );
+          }}
+          className="cursor-pointer text-blue-600 hover:underline dark:text-blue-400"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {app.githubOrg}/{app.githubRepo}
+        </a>
+      </div>
+    );
+  }
+
   if (settings?.githubSettings.secrets) {
     return (
-      <div className="mt-4 w-full">
-        <p>Connected to GitHub!</p>
+      <div className="mt-4 w-full border border-gray-200 rounded-md p-4">
+        <p>Set up your GitHub repo</p>
+        <form className="mt-4 space-y-2" onSubmit={handleCreateRepo}>
+          <label className="block text-sm font-medium">Repository Name</label>
+          <input
+            className="w-full border rounded px-2 py-1"
+            value={repoName}
+            onChange={(e) => {
+              setRepoName(e.target.value);
+              setRepoAvailable(null);
+              setRepoCheckError(null);
+            }}
+            onBlur={handleRepoNameBlur}
+            disabled={isCreatingRepo}
+          />
+          {isCheckingRepo && (
+            <p className="text-xs text-gray-500">Checking availability...</p>
+          )}
+          {repoAvailable === true && (
+            <p className="text-xs text-green-600">
+              Repository name is available!
+            </p>
+          )}
+          {repoAvailable === false && (
+            <p className="text-xs text-red-600">{repoCheckError}</p>
+          )}
+          <Button
+            type="submit"
+            disabled={isCreatingRepo || repoAvailable === false || !repoName}
+          >
+            {isCreatingRepo ? "Creating..." : "Create Repo"}
+          </Button>
+        </form>
+        {createRepoError && (
+          <p className="text-red-600 mt-2">{createRepoError}</p>
+        )}
+        {createRepoSuccess && (
+          <p className="text-green-600 mt-2">Repository created and linked!</p>
+        )}
       </div>
     );
   }

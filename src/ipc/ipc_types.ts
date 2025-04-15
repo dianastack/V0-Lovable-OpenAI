@@ -50,6 +50,8 @@ export interface App {
   files: string[];
   createdAt: Date;
   updatedAt: Date;
+  githubOrg: string | null;
+  githubRepo: string | null;
 }
 
 export interface Version {

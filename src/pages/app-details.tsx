@@ -238,7 +238,7 @@ export default function AppDetailsPage() {
             Open in Chat
             <MessageCircle className="h-5 w-5" />
           </Button>
-          <GitHubConnector appId={appId} />
+          <GitHubConnector appId={appId} folderName={selectedApp.path} />
         </div>
 
         {/* Rename Dialog */}
