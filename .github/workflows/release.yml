@@ -30,6 +30,7 @@ jobs:
       - name: add macos cert
         env:
           MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
         run: chmod +x tools/add-macos-cert.sh && . ./tools/add-macos-cert.sh
       - name: Publish app
         env:
