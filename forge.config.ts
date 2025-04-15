@@ -49,7 +49,7 @@ const config: ForgeConfig = {
     icon: "./assets/icon/logo",
 
     osxSign: {
-      identity: process.env.SIGN_ID,
+      identity: process.env.APPLE_SIGN_ID,
     },
     osxNotarize: {
       appleId: process.env.APPLE_ID!,
