@@ -35,7 +35,7 @@ import { Worker } from "worker_threads";
 import fixPath from "fix-path";
 import { getGitAuthor } from "../utils/git_author";
 import killPort from "kill-port";
-
+import util from "util";
 // Needed, otherwise electron in MacOS/Linux will not be able
 // to find "npm".
 fixPath();
@@ -171,24 +171,22 @@ async function executeAppLocalNode({
 
   // Log output
   process.stdout?.on("data", (data) => {
-    console.log(
-      `App ${appId} (PID: ${process.pid}) stdout: ${data.toString().trim()}`
-    );
+    const message = util.stripVTControlCharacters(data.toString());
+    console.log(`App ${appId} (PID: ${process.pid}) stdout: ${message}`);
     event.sender.send("app:output", {
       type: "stdout",
-      message: data.toString().trim(),
-      appId: appId,
+      message,
+      appId,
     });
   });
 
   process.stderr?.on("data", (data) => {
-    console.error(
-      `App ${appId} (PID: ${process.pid}) stderr: ${data.toString().trim()}`
-    );
+    const message = util.stripVTControlCharacters(data.toString());
+    console.error(`App ${appId} (PID: ${process.pid}) stderr: ${message}`);
     event.sender.send("app:output", {
       type: "stderr",
-      message: data.toString().trim(),
-      appId: appId,
+      message,
+      appId,
     });
   });
 
