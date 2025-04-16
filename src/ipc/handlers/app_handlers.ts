@@ -1021,6 +1021,7 @@ export function registerAppHandlers() {
   );
 
   ipcMain.handle("reset-all", async () => {
+    console.log("start: resetting all apps and settings.");
     // Terminate static server worker if it's running
     if (staticServerWorker) {
       console.log(`Terminating static server worker on reset-all command.`);
@@ -1029,6 +1030,7 @@ export function registerAppHandlers() {
       staticServerPort = null;
     }
     // Stop all running apps first
+    console.log("stopping all running apps...");
     const runningAppIds = Array.from(runningApps.keys());
     for (const appId of runningAppIds) {
       try {
@@ -1040,16 +1042,9 @@ export function registerAppHandlers() {
         // Continue with reset even if stopping fails
       }
     }
-
-    // 1. Remove all app files recursively
-    const dyadAppPath = getDyadAppPath(".");
-    if (fs.existsSync(dyadAppPath)) {
-      await fsPromises.rm(dyadAppPath, { recursive: true, force: true });
-      // Recreate the base directory
-      await fsPromises.mkdir(dyadAppPath, { recursive: true });
-    }
-
-    // 2. Drop the database by deleting the SQLite file
+    console.log("all running apps stopped.");
+    console.log("deleting database...");
+    // 1. Drop the database by deleting the SQLite file
     const dbPath = getDatabasePath();
     if (fs.existsSync(dbPath)) {
       // Close database connections first
@@ -1059,8 +1054,9 @@ export function registerAppHandlers() {
       await fsPromises.unlink(dbPath);
       console.log(`Database file deleted: ${dbPath}`);
     }
-
-    // 3. Remove settings
+    console.log("database deleted.");
+    console.log("deleting settings...");
+    // 2. Remove settings
     const userDataPath = getUserDataPath();
     const settingsPath = path.join(userDataPath, "user-settings.json");
 
@@ -1068,7 +1064,19 @@ export function registerAppHandlers() {
       await fsPromises.unlink(settingsPath);
       console.log(`Settings file deleted: ${settingsPath}`);
     }
-
+    console.log("settings deleted.");
+    // 3. Remove all app files recursively
+    // Doing this last because it's the most time-consuming and the least important
+    // in terms of resetting the app state.
+    console.log("removing all app files...");
+    const dyadAppPath = getDyadAppPath(".");
+    if (fs.existsSync(dyadAppPath)) {
+      await fsPromises.rm(dyadAppPath, { recursive: true, force: true });
+      // Recreate the base directory
+      await fsPromises.mkdir(dyadAppPath, { recursive: true });
+    }
+    console.log("all app files removed.");
+    console.log("reset all complete.");
     return { success: true, message: "Successfully reset everything" };
   });
 
