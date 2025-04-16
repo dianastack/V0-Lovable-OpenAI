@@ -99,10 +99,12 @@ export function PreviewPanel() {
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const { runApp, stopApp, restartApp, error, loading, app } = useRunApp();
   const runningAppIdRef = useRef<number | null>(null);
+  const [key, setKey] = useState(0);
 
   const handleRestart = useCallback(() => {
     if (selectedAppId !== null) {
       restartApp(selectedAppId);
+      setKey((prevKey) => prevKey + 1);
     }
   }, [selectedAppId, restartApp]);
 
@@ -163,6 +165,7 @@ export function PreviewPanel() {
             <div className="h-full overflow-y-auto">
               {previewMode === "preview" ? (
                 <PreviewIframe
+                  key={key}
                   loading={loading}
                   loadingErrorMessage={error?.message}
                 />

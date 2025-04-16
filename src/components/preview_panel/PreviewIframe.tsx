@@ -273,6 +273,7 @@ export const PreviewIframe = ({
   // Function to handle reload
   const handleReload = () => {
     setReloadKey((prevKey) => prevKey + 1);
+    setErrorMessage(undefined);
     // Optionally, add logic here if you need to explicitly stop/start the app again
     // For now, just changing the key should remount the iframe
     console.debug("Reloading iframe preview for app", selectedAppId);
