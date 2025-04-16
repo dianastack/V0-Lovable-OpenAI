@@ -34,6 +34,7 @@ import { readSettings } from "../../main/settings";
 import { Worker } from "worker_threads";
 import fixPath from "fix-path";
 import { getGitAuthor } from "../utils/git_author";
+import killPort from "kill-port";
 
 // Needed, otherwise electron in MacOS/Linux will not be able
 // to find "npm".
@@ -144,7 +145,7 @@ async function executeAppLocalNode({
   appId: number;
   event: Electron.IpcMainInvokeEvent;
 }): Promise<void> {
-  const process = spawn("npm install && npm run dev", [], {
+  const process = spawn("npm install && npm run dev -- --port 32100", [], {
     cwd: appPath,
     shell: true,
     stdio: "pipe", // Ensure stdio is piped so we can capture output/errors and detect close
@@ -245,6 +246,15 @@ function checkCommandExists(command: string): Promise<string | null> {
       }
     });
   });
+}
+
+// Helper to kill process on a specific port (cross-platform, using kill-port)
+async function killProcessOnPort(port: number): Promise<void> {
+  try {
+    await killPort(port, "tcp");
+  } catch (err) {
+    // Ignore if nothing was running on that port
+  }
 }
 
 export function registerAppHandlers() {
@@ -565,6 +575,9 @@ export function registerAppHandlers() {
               `App ${appId} not running in local-node mode, proceeding to start.`
             );
           }
+
+          // Kill any orphaned process on port 32100 (in case previous run left it)
+          await killProcessOnPort(32100);
 
           // Now start the app again
           const app = await db.query.apps.findFirst({
