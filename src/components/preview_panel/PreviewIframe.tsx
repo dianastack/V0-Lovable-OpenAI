@@ -35,7 +35,7 @@ import { showError } from "@/lib/toast";
 import { SandboxConfig } from "@/ipc/ipc_types";
 
 interface ErrorBannerProps {
-  error: string | null;
+  error: string | undefined;
   onDismiss: () => void;
   onAIFix: () => void;
 }
@@ -44,11 +44,11 @@ const ErrorBanner = ({ error, onDismiss, onAIFix }: ErrorBannerProps) => {
   if (!error) return null;
 
   return (
-    <div className="absolute top-2 left-2 right-2 z-10 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-md shadow-sm p-2">
+    <div className="absolute top-2 left-2 right-2 z-10 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md shadow-sm p-2">
       {/* Close button in top left */}
       <button
         onClick={onDismiss}
-        className="absolute top-1 left-1 p-1 hover:bg-red-100 dark:hover:bg-red-900/50 rounded"
+        className="absolute top-1 left-1 p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded"
       >
         <X size={14} className="text-red-500 dark:text-red-400" />
       </button>
@@ -60,11 +60,11 @@ const ErrorBanner = ({ error, onDismiss, onAIFix }: ErrorBannerProps) => {
 
       {/* Tip message */}
       <div className="mt-2 px-6">
-        <div className="relative p-2 bg-red-100 dark:bg-red-900/50 rounded-sm flex gap-1 items-center">
+        <div className="relative p-2 bg-red-100 dark:bg-red-900 rounded-sm flex gap-1 items-center">
           <div>
             <Lightbulb size={16} className=" text-red-800 dark:text-red-300" />
           </div>
-          <span className="text-sm text-red-700 dark:text-red-400">
+          <span className="text-sm text-red-700 dark:text-red-200">
             <span className="font-medium">Tip: </span>Check if refreshing the
             page or restarting the app fixes the error.
           </span>
@@ -88,10 +88,10 @@ const ErrorBanner = ({ error, onDismiss, onAIFix }: ErrorBannerProps) => {
 // Preview iframe component
 export const PreviewIframe = ({
   loading,
-  error,
+  loadingErrorMessage,
 }: {
   loading: boolean;
-  error: Error | null;
+  loadingErrorMessage: string | undefined;
 }) => {
   const selectedAppId = useAtomValue(selectedAppIdAtom);
   const { appUrl } = useAtomValue(appUrlAtom);
@@ -100,8 +100,9 @@ export const PreviewIframe = ({
 
   // State to trigger iframe reload
   const [reloadKey, setReloadKey] = useState(0);
-  const [iframeError, setIframeError] = useState<string | null>(null);
-  const [showError, setShowError] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(
+    loadingErrorMessage
+  );
   const setInputValue = useSetAtom(chatInputValueAtom);
   const [availableRoutes, setAvailableRoutes] = useState<
     Array<{ path: string; label: string }>
@@ -171,7 +172,7 @@ export const PreviewIframe = ({
       if (type === "window-error") {
         const errorMessage = `Error in ${payload.filename} (line ${payload.lineno}, col ${payload.colno}): ${payload.message}`;
         console.error("Iframe error:", errorMessage);
-        setIframeError(errorMessage);
+        setErrorMessage(errorMessage);
         setAppOutput((prev) => [
           ...prev,
           {
@@ -183,7 +184,7 @@ export const PreviewIframe = ({
       } else if (type === "unhandled-rejection") {
         const errorMessage = `Unhandled Promise Rejection: ${payload.reason}`;
         console.error("Iframe unhandled rejection:", errorMessage);
-        setIframeError(errorMessage);
+        setErrorMessage(errorMessage);
         setAppOutput((prev) => [
           ...prev,
           {
@@ -412,10 +413,10 @@ export const PreviewIframe = ({
 
       <div className="relative flex-grow ">
         <ErrorBanner
-          error={showError ? error?.message || iframeError : null}
-          onDismiss={() => setShowError(false)}
+          error={errorMessage}
+          onDismiss={() => setErrorMessage(undefined)}
           onAIFix={() => {
-            setInputValue(`Fix the error in ${error?.message || iframeError}`);
+            setInputValue(`Fix the error in ${errorMessage}`);
           }}
         />
 

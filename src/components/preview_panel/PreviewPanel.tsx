@@ -162,7 +162,10 @@ export function PreviewPanel() {
           <Panel id="content" minSize={30}>
             <div className="h-full overflow-y-auto">
               {previewMode === "preview" ? (
-                <PreviewIframe loading={loading} error={error} />
+                <PreviewIframe
+                  loading={loading}
+                  loadingErrorMessage={error?.message}
+                />
               ) : (
                 <CodeView loading={loading} error={error} app={app} />
               )}
