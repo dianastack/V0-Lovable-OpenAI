@@ -65,3 +65,13 @@ export interface SandboxConfig {
   dependencies: Record<string, string>;
   entry: string;
 }
+
+export type InstallNodeResult =
+  | {
+      success: true;
+      version: string;
+    }
+  | {
+      success: false;
+      errorMessage: string;
+    };

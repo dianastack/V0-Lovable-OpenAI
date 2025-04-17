@@ -13,6 +13,7 @@ import type {
   ChatStreamParams,
   CreateAppParams,
   CreateAppResult,
+  InstallNodeResult,
   ListAppsResponse,
   SandboxConfig,
   Version,
@@ -514,6 +515,17 @@ export class IpcClient {
         nodeVersion: string | null;
         npmVersion: string | null;
       };
+    } catch (error) {
+      showError(error);
+      throw error;
+    }
+  }
+
+  // Install Node.js and npm
+  public async installNode(): Promise<InstallNodeResult> {
+    try {
+      const result = await this.ipcRenderer.invoke("install-node");
+      return result;
     } catch (error) {
       showError(error);
       throw error;

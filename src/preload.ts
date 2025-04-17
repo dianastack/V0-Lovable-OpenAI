@@ -32,6 +32,7 @@ const validInvokeChannels = [
   "open-external-url",
   "reset-all",
   "nodejs-status",
+  "install-node",
   "github:start-flow",
   "github:is-repo-available",
   "github:create-repo",

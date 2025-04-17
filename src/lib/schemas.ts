@@ -86,9 +86,11 @@ export type GithubUser = z.infer<typeof GithubUserSchema>;
 export const UserSettingsSchema = z.object({
   selectedModel: LargeLanguageModelSchema,
   providerSettings: z.record(z.string(), ProviderSettingSchema),
-  runtimeMode: RuntimeModeSchema,
   githubUser: GithubUserSchema.optional(),
   githubAccessToken: SecretSchema.optional(),
+
+  // DEPRECATED.
+  runtimeMode: RuntimeModeSchema.optional(),
 });
 
 /**

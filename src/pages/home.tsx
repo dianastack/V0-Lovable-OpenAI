@@ -11,8 +11,6 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { isPreviewOpenAtom } from "@/atoms/viewAtoms";
 import { useState, useEffect } from "react";
 import { useStreamChat } from "@/hooks/useStreamChat";
-import { SetupRuntimeFlow } from "@/components/SetupRuntimeFlow";
-import { RuntimeMode } from "@/lib/schemas";
 
 export default function HomePage() {
   const [inputValue, setInputValue] = useAtom(chatInputValueAtom);
@@ -83,12 +81,6 @@ export default function HomePage() {
     );
   }
 
-  // Runtime Setup Flow
-  // Render this only if runtimeMode is not set in settings
-  if (settings?.runtimeMode === "unset") {
-    return <SetupRuntimeFlow />;
-  }
-
   // Main Home Page Content (Rendered only if runtimeMode is set)
   return (
     <div className="flex flex-col items-center justify-center max-w-3xl m-auto p-8">
@@ -96,7 +88,7 @@ export default function HomePage() {
         Build your dream app
       </h1>
 
-      {!isAnyProviderSetup() && <SetupBanner />}
+      <SetupBanner />
 
       <div className="w-full">
         <ChatInput onSubmit={handleSubmit} />
