@@ -88,7 +88,7 @@ export const UserSettingsSchema = z.object({
   providerSettings: z.record(z.string(), ProviderSettingSchema),
   githubUser: GithubUserSchema.optional(),
   githubAccessToken: SecretSchema.optional(),
-
+  autoApproveChanges: z.boolean().optional(),
   // DEPRECATED.
   runtimeMode: RuntimeModeSchema.optional(),
 });

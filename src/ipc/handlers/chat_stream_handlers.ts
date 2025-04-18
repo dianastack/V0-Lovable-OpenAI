@@ -266,23 +266,30 @@ export function registerChatStreamHandlers() {
           .set({ content: fullResponse })
           .where(eq(messages.id, assistantMessage.id));
 
-        const status = await processFullResponseActions(
-          fullResponse,
-          req.chatId,
-          { chatSummary }
-        );
-
-        if (status.error) {
-          event.sender.send(
-            "chat:response:error",
-            `Sorry, there was an error applying the AI's changes: ${status.error}`
+        if (readSettings().autoApproveChanges) {
+          const status = await processFullResponseActions(
+            fullResponse,
+            req.chatId,
+            { chatSummary }
           );
-        }
 
-        // Signal that the stream has completed
+          if (status.error) {
+            event.sender.send(
+              "chat:response:error",
+              `Sorry, there was an error applying the AI's changes: ${status.error}`
+            );
+          }
+
+          // Signal that the stream has completed
+          event.sender.send("chat:response:end", {
+            chatId: req.chatId,
+            updatedFiles: status.updatedFiles ?? false,
+          } satisfies ChatResponseEnd);
+        }
+      } else {
         event.sender.send("chat:response:end", {
           chatId: req.chatId,
-          updatedFiles: status.updatedFiles ?? false,
+          updatedFiles: false,
         } satisfies ChatResponseEnd);
       }
 
