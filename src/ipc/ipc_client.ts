@@ -13,10 +13,8 @@ import type {
   ChatStreamParams,
   CreateAppParams,
   CreateAppResult,
-  InstallNodeResult,
   ListAppsResponse,
   NodeSystemInfo,
-  SandboxConfig,
   Version,
 } from "./ipc_types";
 import { showError } from "@/lib/toast";
