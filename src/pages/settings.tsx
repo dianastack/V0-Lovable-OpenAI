@@ -4,6 +4,7 @@ import { ProviderSettingsGrid } from "@/components/ProviderSettings";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { IpcClient } from "@/ipc/ipc_client";
 import { showSuccess, showError } from "@/lib/toast";
+import { AutoApproveSwitch } from "@/components/AutoApproveSwitch";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -63,10 +64,17 @@ export default function SettingsPage() {
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-              Appearance
+              General Settings
             </h2>
 
             <div className="space-y-4">
+              <div className="space-y-2">
+                <AutoApproveSwitch />
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  This will automatically approve code changes and run them.
+                </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Theme

@@ -35,6 +35,7 @@ import {
 import type { Message } from "@/ipc/ipc_types";
 import { isPreviewOpenAtom } from "@/atoms/viewAtoms";
 import { useRunApp } from "@/hooks/useRunApp";
+import { AutoApproveSwitch } from "../AutoApproveSwitch";
 
 export function ChatInput({ chatId }: { chatId?: number }) {
   const [inputValue, setInputValue] = useAtom(chatInputValueAtom);
@@ -298,16 +299,6 @@ function ActionProposalActions({ proposal }: { proposal: ActionProposal }) {
         {proposal.actions.map((action) => mapActionToButton(action))}
       </div>
       <AutoApproveSwitch />
-    </div>
-  );
-}
-
-function AutoApproveSwitch() {
-  // const [autoApprove, setAutoApprove] = useAtom(autoApproveAtom);
-  return (
-    <div className="flex items-center space-x-2">
-      <Switch id="auto-approve" />
-      <Label htmlFor="auto-approve">Auto-approve</Label>
     </div>
   );
 }
