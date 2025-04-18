@@ -130,7 +130,10 @@ const approveProposalHandler = async (
     const processResult = await processFullResponseActions(
       messageToApprove.content,
       chatId,
-      { chatSummary: chatSummary ?? undefined } // Pass summary if found
+      {
+        chatSummary: chatSummary ?? undefined,
+        messageId,
+      } // Pass summary if found
     );
 
     if (processResult.error) {
@@ -146,13 +149,6 @@ const approveProposalHandler = async (
       };
     }
 
-    // 3. Update the message's approval state to 'approved'
-    await db
-      .update(messages)
-      .set({ approvalState: "approved" })
-      .where(eq(messages.id, messageId));
-
-    console.log(`Message ${messageId} marked as approved.`);
     return { success: true };
   } catch (error) {
     console.error(

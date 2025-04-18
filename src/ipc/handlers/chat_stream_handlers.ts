@@ -261,17 +261,26 @@ export function registerChatStreamHandlers() {
           })
           .returning();
 
-        await db
-          .update(messages)
-          .set({ content: fullResponse })
-          .where(eq(messages.id, assistantMessage.id));
-
         if (readSettings().autoApproveChanges) {
           const status = await processFullResponseActions(
             fullResponse,
             req.chatId,
-            { chatSummary }
+            { chatSummary, messageId: assistantMessage.id }
           );
+
+          const chat = await db.query.chats.findFirst({
+            where: eq(chats.id, req.chatId),
+            with: {
+              messages: {
+                orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+              },
+            },
+          });
+
+          event.sender.send("chat:response:chunk", {
+            chatId: req.chatId,
+            messages: chat!.messages,
+          });
 
           if (status.error) {
             event.sender.send(

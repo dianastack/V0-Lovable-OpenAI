@@ -1,5 +1,5 @@
 import { db } from "../../db";
-import { chats } from "../../db/schema";
+import { chats, messages } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import fs from "node:fs";
 import { getDyadAppPath } from "../../paths/paths";
@@ -100,7 +100,10 @@ export function getDyadChatSummaryTag(fullResponse: string): string | null {
 export async function processFullResponseActions(
   fullResponse: string,
   chatId: number,
-  { chatSummary }: { chatSummary: string | undefined }
+  {
+    chatSummary,
+    messageId,
+  }: { chatSummary: string | undefined; messageId: number }
 ): Promise<{ updatedFiles?: boolean; error?: string }> {
   // Get the app associated with the chat
   const chatWithApp = await db.query.chats.findFirst({
@@ -248,6 +251,15 @@ export async function processFullResponseActions(
         author: await getGitAuthor(),
       });
       console.log(`Successfully committed changes: ${changes.join(", ")}`);
+
+      // Update the message to approved
+      await db
+        .update(messages)
+        .set({
+          approvalState: "approved",
+        })
+        .where(eq(messages.id, messageId));
+
       return { updatedFiles: true };
     }
 
