@@ -39,6 +39,8 @@ const validInvokeChannels = [
   "get-app-version",
   "reload-env-path",
   "get-proposal",
+  "approve-proposal",
+  "reject-proposal",
 ] as const;
 
 // Add valid receive channels

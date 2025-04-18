@@ -15,6 +15,7 @@ import { useLoadApp } from "./useLoadApp";
 import { selectedAppIdAtom } from "@/atoms/appAtoms";
 import { useLoadVersions } from "./useLoadVersions";
 import { showError } from "@/lib/toast";
+import { useProposal } from "./useProposal";
 
 export function getRandomString() {
   return Math.random().toString(36).substring(2, 15);
@@ -30,7 +31,7 @@ export function useStreamChat() {
   const { refreshApp } = useLoadApp(selectedAppId);
   const setStreamCount = useSetAtom(chatStreamCountAtom);
   const { refreshVersions } = useLoadVersions(selectedAppId);
-
+  const { refreshProposal } = useProposal();
   const streamMessage = useCallback(
     async ({
       prompt,
@@ -94,6 +95,7 @@ export function useStreamChat() {
 
             // Keep the same as below
             setIsStreaming(false);
+            refreshProposal(chatId);
             refreshChats();
             refreshApp();
             refreshVersions();

@@ -20,6 +20,12 @@ import type {
 import type { Proposal } from "@/lib/schemas";
 import { showError } from "@/lib/toast";
 
+// Define the structure returned by getProposal
+interface ProposalResult {
+  proposal: Proposal;
+  messageId: number;
+}
+
 export interface ChatStreamCallbacks {
   onUpdate: (messages: Message[]) => void;
   onEnd: (response: ChatResponseEnd) => void;
@@ -616,11 +622,12 @@ export class IpcClient {
   }
 
   // Get proposal details
-  public async getProposal(chatId: number): Promise<Proposal> {
+  public async getProposal(chatId: number): Promise<ProposalResult | null> {
     try {
       const data = await this.ipcRenderer.invoke("get-proposal", { chatId });
-      // Assuming the main process returns data matching the Proposal interface
-      return data as Proposal;
+      // Assuming the main process returns data matching the ProposalResult interface
+      // Add a type check/guard if necessary for robustness
+      return data as ProposalResult | null;
     } catch (error) {
       showError(error);
       throw error;
@@ -629,4 +636,44 @@ export class IpcClient {
 
   // Example methods for listening to events (if needed)
   // public on(channel: string, func: (...args: any[]) => void): void {
+
+  // --- Proposal Management ---
+  public async approveProposal({
+    chatId,
+    messageId,
+  }: {
+    chatId: number;
+    messageId: number;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await this.ipcRenderer.invoke("approve-proposal", {
+        chatId,
+        messageId,
+      });
+      return result as { success: boolean; error?: string };
+    } catch (error) {
+      showError(error);
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  public async rejectProposal({
+    chatId,
+    messageId,
+  }: {
+    chatId: number;
+    messageId: number;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await this.ipcRenderer.invoke("reject-proposal", {
+        chatId,
+        messageId,
+      });
+      return result as { success: boolean; error?: string };
+    } catch (error) {
+      showError(error);
+      return { success: false, error: (error as Error).message };
+    }
+  }
+  // --- End Proposal Management ---
 }

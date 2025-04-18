@@ -8,6 +8,7 @@ import {
   AlertOctagon,
   FileText,
   Check,
+  Loader2,
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -31,6 +32,8 @@ interface ChatInputActionsProps {
   onApprove: () => void;
   onReject: () => void;
   isApprovable: boolean; // Can be used to enable/disable buttons
+  isApproving: boolean; // State for approving
+  isRejecting: boolean; // State for rejecting
 }
 
 interface ChatInputProps {
@@ -46,12 +49,16 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
     useStreamChat();
   const [selectedAppId] = useAtom(selectedAppIdAtom);
   const [showError, setShowError] = useState(true);
+  const [isApproving, setIsApproving] = useState(false); // State for approving
+  const [isRejecting, setIsRejecting] = useState(false); // State for rejecting
 
   // Use the hook to fetch the proposal
   const {
     proposal,
+    messageId,
     isLoading: isProposalLoading,
     error: proposalError,
+    refreshProposal,
   } = useProposal(chatId);
 
   const adjustHeight = () => {
@@ -102,14 +109,60 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
     setShowError(false);
   };
 
-  const handleApprove = () => {
-    console.log("Approve clicked");
-    // Add approve logic here
+  const handleApprove = async () => {
+    if (!chatId || !messageId || isApproving || isRejecting || isStreaming)
+      return;
+    console.log(
+      `Approving proposal for chatId: ${chatId}, messageId: ${messageId}`
+    );
+    setIsApproving(true);
+    try {
+      const result = await IpcClient.getInstance().approveProposal({
+        chatId,
+        messageId,
+      });
+      if (result.success) {
+        console.log("Proposal approved successfully");
+        // TODO: Maybe refresh proposal state or show confirmation?
+      } else {
+        console.error("Failed to approve proposal:", result.error);
+        setError(result.error || "Failed to approve proposal");
+      }
+    } catch (err) {
+      console.error("Error approving proposal:", err);
+      setError((err as Error)?.message || "An error occurred while approving");
+    } finally {
+      setIsApproving(false);
+      refreshProposal();
+    }
   };
 
-  const handleReject = () => {
-    console.log("Reject clicked");
-    // Add reject logic here
+  const handleReject = async () => {
+    if (!chatId || !messageId || isApproving || isRejecting || isStreaming)
+      return;
+    console.log(
+      `Rejecting proposal for chatId: ${chatId}, messageId: ${messageId}`
+    );
+    setIsRejecting(true);
+    try {
+      const result = await IpcClient.getInstance().rejectProposal({
+        chatId,
+        messageId,
+      });
+      if (result.success) {
+        console.log("Proposal rejected successfully");
+        // TODO: Maybe refresh proposal state or show confirmation?
+      } else {
+        console.error("Failed to reject proposal:", result.error);
+        setError(result.error || "Failed to reject proposal");
+      }
+    } catch (err) {
+      console.error("Error rejecting proposal:", err);
+      setError((err as Error)?.message || "An error occurred while rejecting");
+    } finally {
+      setIsRejecting(false);
+      refreshProposal();
+    }
   };
 
   if (!settings) {
@@ -150,7 +203,16 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
               proposal={proposal}
               onApprove={handleApprove}
               onReject={handleReject}
-              isApprovable={!isProposalLoading && !!proposal}
+              isApprovable={
+                !isProposalLoading &&
+                !!proposal &&
+                !!messageId &&
+                !isApproving &&
+                !isRejecting &&
+                !isStreaming
+              }
+              isApproving={isApproving}
+              isRejecting={isRejecting}
             />
           )}
           <div className="flex items-start space-x-2 ">
@@ -202,6 +264,8 @@ function ChatInputActions({
   onApprove,
   onReject,
   isApprovable,
+  isApproving,
+  isRejecting,
 }: ChatInputActionsProps) {
   const [autoApprove, setAutoApprove] = useState(false);
   const [isDetailsVisible, setIsDetailsVisible] = useState(false);
@@ -236,9 +300,13 @@ function ChatInputActions({
             size="sm"
             variant="outline"
             onClick={onApprove}
-            disabled={!isApprovable}
+            disabled={!isApprovable || isApproving || isRejecting}
           >
-            <Check size={16} className="mr-1" />
+            {isApproving ? (
+              <Loader2 size={16} className="mr-1 animate-spin" />
+            ) : (
+              <Check size={16} className="mr-1" />
+            )}
             Approve
           </Button>
           <Button
@@ -246,9 +314,13 @@ function ChatInputActions({
             size="sm"
             variant="outline"
             onClick={onReject}
-            disabled={!isApprovable}
+            disabled={!isApprovable || isApproving || isRejecting}
           >
-            <X size={16} className="mr-1" />
+            {isRejecting ? (
+              <Loader2 size={16} className="mr-1 animate-spin" />
+            ) : (
+              <X size={16} className="mr-1" />
+            )}
             Reject
           </Button>
           <div className="flex items-center space-x-1 ml-auto">
