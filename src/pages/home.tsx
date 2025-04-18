@@ -84,10 +84,6 @@ export default function HomePage() {
   // Main Home Page Content
   return (
     <div className="flex flex-col items-center justify-center max-w-3xl m-auto p-8">
-      <h1 className="text-6xl font-bold mb-12 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 tracking-tight">
-        Build your dream app
-      </h1>
-
       <SetupBanner />
 
       <div className="w-full">

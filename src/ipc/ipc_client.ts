@@ -15,6 +15,7 @@ import type {
   CreateAppResult,
   InstallNodeResult,
   ListAppsResponse,
+  NodeSystemInfo,
   SandboxConfig,
   Version,
 } from "./ipc_types";
@@ -130,6 +131,10 @@ export class IpcClient {
       IpcClient.instance = new IpcClient();
     }
     return IpcClient.instance;
+  }
+
+  public async reloadDyad(): Promise<void> {
+    await this.ipcRenderer.invoke("reload-dyad");
   }
 
   // Create a new app with an initial chat
@@ -493,23 +498,9 @@ export class IpcClient {
   }
 
   // Check Node.js and npm status
-  public async getNodejsStatus(): Promise<{
-    nodeVersion: string | null;
-    pnpmVersion: string | null;
-  }> {
+  public async getNodejsStatus(): Promise<NodeSystemInfo> {
     try {
       const result = await this.ipcRenderer.invoke("nodejs-status");
-      return result;
-    } catch (error) {
-      showError(error);
-      throw error;
-    }
-  }
-
-  // Install Node.js and npm
-  public async installNode(): Promise<InstallNodeResult> {
-    try {
-      const result = await this.ipcRenderer.invoke("install-node");
       return result;
     } catch (error) {
       showError(error);

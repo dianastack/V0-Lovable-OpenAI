@@ -1,58 +1,12 @@
-import { ipcMain } from "electron";
+import { ipcMain, app } from "electron";
 import { spawn } from "child_process";
-import { platform } from "os";
-import { InstallNodeResult } from "../ipc_types";
-type ShellResult =
-  | {
-      success: true;
-      output: string;
-    }
-  | {
-      success: false;
-      errorMessage: string;
-    };
-
-function runShell(command: string): Promise<ShellResult> {
-  return new Promise((resolve) => {
-    let stdout = "";
-    let stderr = "";
-    const process = spawn(command, {
-      shell: true,
-      stdio: ["ignore", "pipe", "pipe"], // ignore stdin, pipe stdout/stderr
-    });
-
-    process.stdout?.on("data", (data) => {
-      stdout += data.toString();
-    });
-
-    process.stderr?.on("data", (data) => {
-      stderr += data.toString();
-    });
-
-    process.on("error", (error) => {
-      console.error(`Error executing command "${command}":`, error.message);
-      resolve({ success: false, errorMessage: error.message });
-    });
-
-    process.on("close", (code) => {
-      if (code === 0) {
-        resolve({ success: true, output: stdout.trim() });
-      } else {
-        const errorMessage =
-          stderr.trim() || `Command failed with code ${code}`;
-        console.error(
-          `Command "${command}" failed with code ${code}: ${stderr.trim()}`
-        );
-        resolve({ success: false, errorMessage });
-      }
-    });
-  });
-}
+import { platform, arch } from "os";
+import { NodeSystemInfo } from "../ipc_types";
 
 function checkCommandExists(command: string): Promise<string | null> {
   return new Promise((resolve) => {
     let output = "";
-    const process = spawn(command, ["--version"], {
+    const process = spawn(command, {
       shell: true,
       stdio: ["ignore", "pipe", "pipe"], // ignore stdin, pipe stdout/stderr
     });
@@ -87,64 +41,35 @@ function checkCommandExists(command: string): Promise<string | null> {
 }
 
 export function registerNodeHandlers() {
-  ipcMain.handle(
-    "nodejs-status",
-    async (): Promise<{
-      nodeVersion: string | null;
-      pnpmVersion: string | null;
-    }> => {
-      // Run checks in parallel
-      const [nodeVersion, pnpmVersion] = await Promise.all([
-        checkCommandExists("node"),
-        checkCommandExists("pnpm"),
-      ]);
-      return { nodeVersion, pnpmVersion };
-    }
-  );
-
-  ipcMain.handle("install-node", async (): Promise<InstallNodeResult> => {
-    console.log("Installing Node.js...");
-    if (platform() === "win32") {
-      let result = await runShell("winget install Volta.Volta");
-      if (!result.success) {
-        return { success: false, errorMessage: result.errorMessage };
-      }
-    } else {
-      let result = await runShell("curl https://get.volta.sh | bash");
-      if (!result.success) {
-        return { success: false, errorMessage: result.errorMessage };
+  ipcMain.handle("nodejs-status", async (): Promise<NodeSystemInfo> => {
+    // Run checks in parallel
+    const [nodeVersion, pnpmVersion] = await Promise.all([
+      checkCommandExists("node --version"),
+      // First, check if pnpm is installed.
+      // If not, try to install it using corepack.
+      // If both fail, then pnpm is not available.
+      checkCommandExists(
+        "pnpm --version || corepack enable pnpm && pnpm --version"
+      ),
+    ]);
+    // Default to mac download url.
+    let nodeDownloadUrl = "https://nodejs.org/dist/v22.14.0/node-v22.14.0.pkg";
+    if (platform() == "win32") {
+      if (arch() === "arm64" || arch() === "arm") {
+        nodeDownloadUrl =
+          "https://nodejs.org/dist/v22.14.0/node-v22.14.0-arm64.msi";
+      } else {
+        // x64 is the most common architecture for Windows so it's the
+        // default download url.
+        nodeDownloadUrl =
+          "https://nodejs.org/dist/v22.14.0/node-v22.14.0-x64.msi";
       }
     }
-    console.log("Installed Volta");
+    return { nodeVersion, pnpmVersion, nodeDownloadUrl };
+  });
 
-    process.env.PATH = ["~/.volta/bin", process.env.PATH].join(":");
-    console.log("Updated PATH");
-    let result = await runShell("volta install node");
-    if (!result.success) {
-      return { success: false, errorMessage: result.errorMessage };
-    }
-    console.log("Installed Node.js (via Volta)");
-
-    result = await runShell("node --version");
-    if (!result.success) {
-      return { success: false, errorMessage: result.errorMessage };
-    }
-    const nodeVersion = result.output.trim();
-    console.log("Node.js is setup with version", nodeVersion);
-
-    result = await runShell("corepack enable pnpm");
-    if (!result.success) {
-      return { success: false, errorMessage: result.errorMessage };
-    }
-    console.log("Enabled pnpm");
-
-    result = await runShell("pnpm --version");
-    if (!result.success) {
-      return { success: false, errorMessage: result.errorMessage };
-    }
-    const pnpmVersion = result.output.trim();
-    console.log("pnpm is setup with version", pnpmVersion);
-
-    return { success: true, nodeVersion, pnpmVersion };
+  ipcMain.handle("reload-dyad", async (): Promise<void> => {
+    app.relaunch();
+    app.exit(0);
   });
 }

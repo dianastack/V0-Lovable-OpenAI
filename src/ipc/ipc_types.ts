@@ -66,13 +66,8 @@ export interface SandboxConfig {
   entry: string;
 }
 
-export type InstallNodeResult =
-  | {
-      success: true;
-      nodeVersion: string;
-      pnpmVersion: string;
-    }
-  | {
-      success: false;
-      errorMessage: string;
-    };
+export interface NodeSystemInfo {
+  nodeVersion: string | null;
+  pnpmVersion: string | null;
+  nodeDownloadUrl: string;
+}

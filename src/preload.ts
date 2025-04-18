@@ -37,6 +37,7 @@ const validInvokeChannels = [
   "github:create-repo",
   "github:push",
   "get-app-version",
+  "reload-dyad",
 ] as const;
 
 // Add valid receive channels
