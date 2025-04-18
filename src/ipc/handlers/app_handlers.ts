@@ -65,7 +65,7 @@ async function executeAppLocalNode({
   appId: number;
   event: Electron.IpcMainInvokeEvent;
 }): Promise<void> {
-  const process = spawn("pnpm install && pnpm run dev -- --port 32100", [], {
+  const process = spawn("pnpm install && pnpm run dev --port 32100", [], {
     cwd: appPath,
     shell: true,
     stdio: "pipe", // Ensure stdio is piped so we can capture output/errors and detect close
