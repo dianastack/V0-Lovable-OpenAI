@@ -55,8 +55,8 @@ const ErrorBanner = ({ error, onDismiss, onAIFix }: ErrorBannerProps) => {
             <Lightbulb size={16} className=" text-red-800 dark:text-red-300" />
           </div>
           <span className="text-sm text-red-700 dark:text-red-200">
-            <span className="font-medium">Tip: </span>Check if refreshing the
-            page or restarting the app fixes the error.
+            <span className="font-medium">Tip: </span>Check if restarting the
+            app fixes the error.
           </span>
         </div>
       </div>

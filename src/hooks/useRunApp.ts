@@ -106,5 +106,10 @@ export function useRunApp() {
     }
   }, []);
 
-  return { loading, error, runApp, stopApp, restartApp, app };
+  const refreshAppIframe = useCallback(async () => {
+    setPreviewPanelKey((prevKey) => prevKey + 1);
+    setError(null);
+  }, [setPreviewPanelKey, setError]);
+
+  return { loading, error, runApp, stopApp, restartApp, app, refreshAppIframe };
 }

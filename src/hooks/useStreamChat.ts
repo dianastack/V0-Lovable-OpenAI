@@ -17,6 +17,7 @@ import { useLoadVersions } from "./useLoadVersions";
 import { showError } from "@/lib/toast";
 import { useProposal } from "./useProposal";
 import { useSearch } from "@tanstack/react-router";
+import { useRunApp } from "./useRunApp";
 
 export function getRandomString() {
   return Math.random().toString(36).substring(2, 15);
@@ -34,6 +35,7 @@ export function useStreamChat({
   const { refreshApp } = useLoadApp(selectedAppId);
   const setStreamCount = useSetAtom(chatStreamCountAtom);
   const { refreshVersions } = useLoadVersions(selectedAppId);
+  const { refreshAppIframe } = useRunApp();
   let chatId: number | undefined;
 
   if (hasChatId) {
@@ -100,6 +102,7 @@ export function useStreamChat({
           onEnd: (response: ChatResponseEnd) => {
             if (response.updatedFiles) {
               setIsPreviewOpen(true);
+              refreshAppIframe();
             }
             refreshProposal(chatId);
 

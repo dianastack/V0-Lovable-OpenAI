@@ -50,6 +50,8 @@ export function ChatInput({ chatId }: { chatId?: number }) {
   const [messages, setMessages] = useAtom<Message[]>(chatMessagesAtom);
   const setIsPreviewOpen = useSetAtom(isPreviewOpenAtom);
 
+  const { refreshAppIframe } = useRunApp();
+
   // Use the hook to fetch the proposal
   const {
     proposalResult,
@@ -140,6 +142,9 @@ export function ChatInput({ chatId }: { chatId?: number }) {
     } finally {
       setIsApproving(false);
       setIsPreviewOpen(true);
+      refreshAppIframe();
+
+      // Keep same as handleReject
       refreshProposal();
       fetchChatMessages();
     }
@@ -169,6 +174,8 @@ export function ChatInput({ chatId }: { chatId?: number }) {
       setError((err as Error)?.message || "An error occurred while rejecting");
     } finally {
       setIsRejecting(false);
+
+      // Keep same as handleApprove
       refreshProposal();
       fetchChatMessages();
     }
