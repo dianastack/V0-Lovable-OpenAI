@@ -38,6 +38,7 @@ const validInvokeChannels = [
   "github:push",
   "get-app-version",
   "reload-env-path",
+  "get-proposal",
 ] as const;
 
 // Add valid receive channels

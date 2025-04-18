@@ -23,6 +23,15 @@ import { useLoadApp } from "@/hooks/useLoadApp";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useProposal } from "@/hooks/useProposal";
+import { Proposal } from "@/lib/schemas";
+
+interface ChatInputActionsProps {
+  proposal: Proposal;
+  onApprove: () => void;
+  onReject: () => void;
+  isApprovable: boolean; // Can be used to enable/disable buttons
+}
 
 interface ChatInputProps {
   chatId?: number;
@@ -37,6 +46,13 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
     useStreamChat();
   const [selectedAppId] = useAtom(selectedAppIdAtom);
   const [showError, setShowError] = useState(true);
+
+  // Use the hook to fetch the proposal
+  const {
+    proposal,
+    isLoading: isProposalLoading,
+    error: proposalError,
+  } = useProposal(chatId);
 
   const adjustHeight = () => {
     const textarea = textareaRef.current;
@@ -86,6 +102,16 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
     setShowError(false);
   };
 
+  const handleApprove = () => {
+    console.log("Approve clicked");
+    // Add approve logic here
+  };
+
+  const handleReject = () => {
+    console.log("Reject clicked");
+    // Add reject logic here
+  };
+
   if (!settings) {
     return null; // Or loading state
   }
@@ -105,9 +131,28 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
           </div>
         </div>
       )}
+      {/* Display loading or error state for proposal */}
+      {isProposalLoading && (
+        <div className="p-4 text-sm text-muted-foreground">
+          Loading proposal...
+        </div>
+      )}
+      {proposalError && (
+        <div className="p-4 text-sm text-red-600">
+          Error loading proposal: {proposalError}
+        </div>
+      )}
       <div className="p-4">
         <div className="flex flex-col space-y-2 border border-border rounded-lg bg-(--background-lighter) shadow-sm">
-          <ChatInputActions />
+          {/* Only render ChatInputActions if proposal is loaded */}
+          {proposal && (
+            <ChatInputActions
+              proposal={proposal}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              isApprovable={!isProposalLoading && !!proposal}
+            />
+          )}
           <div className="flex items-start space-x-2 ">
             <textarea
               ref={textareaRef}
@@ -151,46 +196,15 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
   );
 }
 
-function ChatInputActions() {
+// Update ChatInputActions to accept props
+function ChatInputActions({
+  proposal,
+  onApprove,
+  onReject,
+  isApprovable,
+}: ChatInputActionsProps) {
   const [autoApprove, setAutoApprove] = useState(false);
   const [isDetailsVisible, setIsDetailsVisible] = useState(false);
-
-  const handleApprove = () => {
-    console.log("Approve clicked");
-    // Add approve logic here
-  };
-
-  const handleReject = () => {
-    console.log("Reject clicked");
-    // Add reject logic here
-  };
-
-  // Placeholder data
-  const securityRisks = [
-    {
-      type: "warning",
-      title: "Potential XSS Vulnerability",
-      description: "User input is directly rendered without sanitization.",
-    },
-    {
-      type: "danger",
-      title: "Hardcoded API Key",
-      description: "API key found in plain text in configuration file.",
-    },
-  ];
-
-  const filesChanged = [
-    {
-      name: "ChatInput.tsx",
-      path: "src/components/chat/ChatInput.tsx",
-      summary: "Added review actions and details section.",
-    },
-    {
-      name: "api.ts",
-      path: "src/lib/api.ts",
-      summary: "Refactored API call structure.",
-    },
-  ];
 
   return (
     <div className="border-b border-border">
@@ -206,9 +220,9 @@ function ChatInputActions() {
             ) : (
               <ChevronDown size={16} className="mr-1" />
             )}
-            Review: foo bar changes
+            Review: {proposal.title}
           </button>
-          {securityRisks.length > 0 && (
+          {proposal.securityRisks.length > 0 && (
             <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">
               Security risks found
             </span>
@@ -221,7 +235,8 @@ function ChatInputActions() {
             className="px-8"
             size="sm"
             variant="outline"
-            onClick={handleApprove}
+            onClick={onApprove}
+            disabled={!isApprovable}
           >
             <Check size={16} className="mr-1" />
             Approve
@@ -230,7 +245,8 @@ function ChatInputActions() {
             className="px-8"
             size="sm"
             variant="outline"
-            onClick={handleReject}
+            onClick={onReject}
+            disabled={!isApprovable}
           >
             <X size={16} className="mr-1" />
             Reject
@@ -256,7 +272,7 @@ function ChatInputActions() {
           <div className="mb-3">
             <h4 className="font-semibold mb-1">Security Risks</h4>
             <ul className="space-y-1">
-              {securityRisks.map((risk, index) => (
+              {proposal.securityRisks.map((risk, index) => (
                 <li key={index} className="flex items-start space-x-2">
                   {risk.type === "warning" ? (
                     <AlertTriangle
@@ -281,7 +297,7 @@ function ChatInputActions() {
           <div>
             <h4 className="font-semibold mb-1">Files Changed</h4>
             <ul className="space-y-1">
-              {filesChanged.map((file, index) => (
+              {proposal.filesChanged.map((file, index) => (
                 <li key={index} className="flex items-center space-x-2">
                   <FileText
                     size={16}

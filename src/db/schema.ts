@@ -34,6 +34,9 @@ export const messages = sqliteTable("messages", {
     .references(() => chats.id, { onDelete: "cascade" }),
   role: text("role", { enum: ["user", "assistant"] }).notNull(),
   content: text("content").notNull(),
+  approvalState: text("approval_state", {
+    enum: ["approved", "rejected", "pending"],
+  }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

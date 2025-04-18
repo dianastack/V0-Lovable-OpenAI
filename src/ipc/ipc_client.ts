@@ -17,6 +17,7 @@ import type {
   NodeSystemInfo,
   Version,
 } from "./ipc_types";
+import type { Proposal } from "@/lib/schemas";
 import { showError } from "@/lib/toast";
 
 export interface ChatStreamCallbacks {
@@ -608,6 +609,18 @@ export class IpcClient {
     try {
       const result = await this.ipcRenderer.invoke("get-app-version");
       return result.version as string;
+    } catch (error) {
+      showError(error);
+      throw error;
+    }
+  }
+
+  // Get proposal details
+  public async getProposal(chatId: number): Promise<Proposal> {
+    try {
+      const data = await this.ipcRenderer.invoke("get-proposal", { chatId });
+      // Assuming the main process returns data matching the Proposal interface
+      return data as Proposal;
     } catch (error) {
       showError(error);
       throw error;

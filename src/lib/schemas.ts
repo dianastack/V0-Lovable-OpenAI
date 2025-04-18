@@ -97,3 +97,23 @@ export const UserSettingsSchema = z.object({
  * Type derived from the UserSettingsSchema
  */
 export type UserSettings = z.infer<typeof UserSettingsSchema>;
+
+// Define interfaces for the props
+export interface SecurityRisk {
+  type: "warning" | "danger";
+  title: string;
+  description: string;
+}
+
+export interface FileChange {
+  name: string;
+  path: string;
+  summary: string;
+}
+
+// New Proposal interface
+export interface Proposal {
+  title: string;
+  securityRisks: SecurityRisk[];
+  filesChanged: FileChange[];
+}
