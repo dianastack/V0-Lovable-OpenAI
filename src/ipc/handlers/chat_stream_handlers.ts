@@ -285,12 +285,12 @@ export function registerChatStreamHandlers() {
             chatId: req.chatId,
             updatedFiles: status.updatedFiles ?? false,
           } satisfies ChatResponseEnd);
+        } else {
+          event.sender.send("chat:response:end", {
+            chatId: req.chatId,
+            updatedFiles: false,
+          } satisfies ChatResponseEnd);
         }
-      } else {
-        event.sender.send("chat:response:end", {
-          chatId: req.chatId,
-          updatedFiles: false,
-        } satisfies ChatResponseEnd);
       }
 
       // Return the chat ID for backwards compatibility

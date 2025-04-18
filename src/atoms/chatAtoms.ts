@@ -11,6 +11,7 @@ export const selectedChatIdAtom = atom<number | null>(null);
 
 export const isStreamingAtom = atom<boolean>(false);
 export const chatInputValueAtom = atom<string>("");
+export const homeChatInputValueAtom = atom<string>("");
 
 // Atoms for chat list management
 export const chatsAtom = atom<ChatSummary[]>([]);

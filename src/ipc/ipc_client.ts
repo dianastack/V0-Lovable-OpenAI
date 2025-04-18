@@ -17,14 +17,8 @@ import type {
   Message,
   Version,
 } from "./ipc_types";
-import type { Proposal } from "@/lib/schemas";
+import type { Proposal, ProposalResult } from "@/lib/schemas";
 import { showError } from "@/lib/toast";
-
-// Define the structure returned by getProposal
-interface ProposalResult {
-  proposal: Proposal;
-  messageId: number;
-}
 
 export interface ChatStreamCallbacks {
   onUpdate: (messages: Message[]) => void;

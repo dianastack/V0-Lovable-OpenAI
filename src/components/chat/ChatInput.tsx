@@ -11,12 +11,12 @@ import {
   Loader2,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ModelPicker } from "@/components/ModelPicker";
 import { useSettings } from "@/hooks/useSettings";
 import { IpcClient } from "@/ipc/ipc_client";
-import { chatInputValueAtom } from "@/atoms/chatAtoms";
-import { useAtom } from "jotai";
+import { chatInputValueAtom, chatMessagesAtom } from "@/atoms/chatAtoms";
+import { useAtom, useSetAtom } from "jotai";
 import { useStreamChat } from "@/hooks/useStreamChat";
 import { useChats } from "@/hooks/useChats";
 import { selectedAppIdAtom } from "@/atoms/appAtoms";
@@ -26,7 +26,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useProposal } from "@/hooks/useProposal";
 import { Proposal } from "@/lib/schemas";
-
+import type { Message } from "@/ipc/ipc_types";
+import { isPreviewOpenAtom } from "@/atoms/viewAtoms";
 interface ChatInputActionsProps {
   proposal: Proposal;
   onApprove: () => void;
@@ -36,12 +37,7 @@ interface ChatInputActionsProps {
   isRejecting: boolean; // State for rejecting
 }
 
-interface ChatInputProps {
-  chatId?: number;
-  onSubmit?: () => void;
-}
-
-export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
+export function ChatInput({ chatId }: { chatId?: number }) {
   const [inputValue, setInputValue] = useAtom(chatInputValueAtom);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { settings, updateSettings, isAnyProviderSetup } = useSettings();
@@ -51,6 +47,8 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
   const [showError, setShowError] = useState(true);
   const [isApproving, setIsApproving] = useState(false); // State for approving
   const [isRejecting, setIsRejecting] = useState(false); // State for rejecting
+  const [messages, setMessages] = useAtom<Message[]>(chatMessagesAtom);
+  const setIsPreviewOpen = useSetAtom(isPreviewOpenAtom);
 
   // Use the hook to fetch the proposal
   const {
@@ -80,10 +78,19 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
     }
   }, [error]);
 
+  const fetchChatMessages = useCallback(async () => {
+    if (!chatId) {
+      setMessages([]);
+      return;
+    }
+    const chat = await IpcClient.getInstance().getChat(chatId);
+    setMessages(chat.messages);
+  }, [chatId, setMessages]);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      submitHandler();
+      handleSubmit();
     }
   };
 
@@ -96,7 +103,6 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
     setInputValue("");
     await streamMessage({ prompt: currentInput, chatId });
   };
-  const submitHandler = onSubmit ? onSubmit : handleSubmit;
 
   const handleCancel = () => {
     if (chatId) {
@@ -133,7 +139,9 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
       setError((err as Error)?.message || "An error occurred while approving");
     } finally {
       setIsApproving(false);
+      setIsPreviewOpen(true);
       refreshProposal();
+      fetchChatMessages();
     }
   };
 
@@ -162,6 +170,7 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
     } finally {
       setIsRejecting(false);
       refreshProposal();
+      fetchChatMessages();
     }
   };
 
@@ -236,7 +245,7 @@ export function ChatInput({ chatId, onSubmit }: ChatInputProps) {
               </button>
             ) : (
               <button
-                onClick={submitHandler}
+                onClick={handleSubmit}
                 disabled={!inputValue.trim() || !isAnyProviderSetup()}
                 className="px-2 py-2 mt-1 mr-2 hover:bg-(--background-darkest) text-(--sidebar-accent-fg) rounded-lg disabled:opacity-50"
               >

@@ -1,19 +1,18 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAtom, useSetAtom } from "jotai";
-import { chatInputValueAtom } from "../atoms/chatAtoms";
+import { homeChatInputValueAtom } from "../atoms/chatAtoms";
 import { selectedAppIdAtom } from "@/atoms/appAtoms";
 import { IpcClient } from "@/ipc/ipc_client";
 import { generateCuteAppName } from "@/lib/utils";
 import { useLoadApps } from "@/hooks/useLoadApps";
 import { useSettings } from "@/hooks/useSettings";
 import { SetupBanner } from "@/components/SetupBanner";
-import { ChatInput } from "@/components/chat/ChatInput";
 import { isPreviewOpenAtom } from "@/atoms/viewAtoms";
 import { useState, useEffect } from "react";
 import { useStreamChat } from "@/hooks/useStreamChat";
-
+import { HomeChatInput } from "@/components/chat/HomeChatInput";
 export default function HomePage() {
-  const [inputValue, setInputValue] = useAtom(chatInputValueAtom);
+  const [inputValue, setInputValue] = useAtom(homeChatInputValueAtom);
   const navigate = useNavigate();
   const search = useSearch({ from: "/" });
   const setSelectedAppId = useSetAtom(selectedAppIdAtom);
@@ -87,7 +86,7 @@ export default function HomePage() {
       <SetupBanner />
 
       <div className="w-full">
-        <ChatInput onSubmit={handleSubmit} />
+        <HomeChatInput onSubmit={handleSubmit} />
 
         <div className="flex flex-wrap gap-4 mt-4">
           {[

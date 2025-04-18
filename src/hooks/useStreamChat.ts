@@ -47,7 +47,6 @@ export function useStreamChat() {
       }
 
       setError(null);
-      console.log("streaming message - set messages", prompt);
       setMessages((currentMessages: Message[]) => {
         if (redo) {
           let remainingMessages = currentMessages.slice();
@@ -92,10 +91,10 @@ export function useStreamChat() {
             if (response.updatedFiles) {
               setIsPreviewOpen(true);
             }
+            refreshProposal(chatId);
 
             // Keep the same as below
             setIsStreaming(false);
-            refreshProposal(chatId);
             refreshChats();
             refreshApp();
             refreshVersions();

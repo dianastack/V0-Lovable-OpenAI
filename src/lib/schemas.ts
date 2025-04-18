@@ -117,3 +117,8 @@ export interface Proposal {
   securityRisks: SecurityRisk[];
   filesChanged: FileChange[];
 }
+
+export interface ProposalResult {
+  proposal: Proposal;
+  messageId: number;
+}
