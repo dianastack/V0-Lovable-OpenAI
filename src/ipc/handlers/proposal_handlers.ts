@@ -1,5 +1,5 @@
 import { ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { Proposal } from "@/lib/schemas";
+import type { CodeProposal, ProposalResult } from "@/lib/schemas";
 import { db } from "../../db";
 import { messages } from "../../db/schema";
 import { desc, eq, and, Update } from "drizzle-orm";
@@ -19,13 +19,6 @@ interface ParsedProposal {
   title: string;
   files: string[];
 }
-
-// Define return type for getProposalHandler
-interface ProposalResult {
-  proposal: Proposal;
-  messageId: number;
-}
-
 function isParsedProposal(obj: any): obj is ParsedProposal {
   return (
     obj &&
@@ -54,11 +47,22 @@ const getProposalHandler = async (
       },
     });
 
-    if (
-      latestAssistantMessage?.approvalState === "approved" ||
-      latestAssistantMessage?.approvalState === "rejected"
-    ) {
+    if (latestAssistantMessage?.approvalState === "rejected") {
       return null;
+    }
+    if (latestAssistantMessage?.approvalState === "approved") {
+      return {
+        proposal: {
+          type: "action-proposal",
+          actions: [
+            {
+              id: "restart-app",
+            },
+          ],
+        },
+        chatId: chatId,
+        messageId: latestAssistantMessage.id,
+      };
     }
 
     if (latestAssistantMessage?.content && latestAssistantMessage.id) {
@@ -74,7 +78,8 @@ const getProposalHandler = async (
 
       // Check if we have enough information to create a proposal
       if (proposalTitle || proposalFiles.length > 0) {
-        const proposal: Proposal = {
+        const proposal: CodeProposal = {
+          type: "code-proposal",
           // Use parsed title or a default title if summary tag is missing but write tags exist
           title: proposalTitle ?? "Proposed File Changes",
           securityRisks: [], // Keep empty
@@ -85,7 +90,7 @@ const getProposalHandler = async (
           })),
         };
         console.log("Generated proposal on the fly:", proposal);
-        return { proposal, messageId }; // Return proposal and messageId
+        return { proposal, chatId, messageId }; // Return proposal and messageId
       } else {
         console.log(
           "No relevant tags found in the latest assistant message content."

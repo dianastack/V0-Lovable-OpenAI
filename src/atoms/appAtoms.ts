@@ -17,3 +17,5 @@ export const userSettingsAtom = atom<UserSettings | null>(null);
 
 // Atom for storing allow-listed environment variables
 export const envVarsAtom = atom<Record<string, string | undefined>>({});
+
+export const previewPanelKeyAtom = atom<number>(0);

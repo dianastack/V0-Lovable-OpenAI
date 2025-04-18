@@ -17,7 +17,7 @@ import type {
   Message,
   Version,
 } from "./ipc_types";
-import type { Proposal, ProposalResult } from "@/lib/schemas";
+import type { CodeProposal, ProposalResult } from "@/lib/schemas";
 import { showError } from "@/lib/toast";
 
 export interface ChatStreamCallbacks {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { IpcClient } from "@/ipc/ipc_client";
-import type { Proposal, ProposalResult } from "@/lib/schemas"; // Import Proposal type
+import type { CodeProposal, ProposalResult } from "@/lib/schemas"; // Import Proposal type
 import { proposalResultAtom } from "@/atoms/proposalAtoms";
 import { useAtom } from "jotai";
 export function useProposal(chatId?: number | undefined) {
@@ -8,40 +8,35 @@ export function useProposal(chatId?: number | undefined) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProposal = useCallback(
-    async (innerChatId?: number) => {
-      chatId = chatId ?? innerChatId;
-      console.log("fetching proposal for chatId", chatId);
-      if (chatId === undefined) {
-        setProposalResult(null);
-        setIsLoading(false);
-        setError(null);
-        return;
-      }
-      setIsLoading(true);
+  const fetchProposal = useCallback(async () => {
+    if (chatId === undefined) {
+      setProposalResult(null);
+      setIsLoading(false);
       setError(null);
-      setProposalResult(null); // Reset on new fetch
-      try {
-        // Type assertion might be needed depending on how IpcClient is typed
-        const result = (await IpcClient.getInstance().getProposal(
-          chatId
-        )) as ProposalResult | null;
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setProposalResult(null); // Reset on new fetch
+    try {
+      // Type assertion might be needed depending on how IpcClient is typed
+      const result = (await IpcClient.getInstance().getProposal(
+        chatId
+      )) as ProposalResult | null;
 
-        if (result) {
-          setProposalResult(result);
-        } else {
-          setProposalResult(null); // Explicitly set to null if IPC returns null
-        }
-      } catch (err: any) {
-        console.error("Error fetching proposal:", err);
-        setError(err.message || "Failed to fetch proposal");
-        setProposalResult(null); // Clear proposal data on error
-      } finally {
-        setIsLoading(false);
+      if (result) {
+        setProposalResult(result);
+      } else {
+        setProposalResult(null); // Explicitly set to null if IPC returns null
       }
-    },
-    [chatId]
-  ); // Depend on chatId
+    } catch (err: any) {
+      console.error("Error fetching proposal:", err);
+      setError(err.message || "Failed to fetch proposal");
+      setProposalResult(null); // Clear proposal data on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, [chatId]); // Depend on chatId
 
   useEffect(() => {
     fetchProposal();
@@ -52,18 +47,10 @@ export function useProposal(chatId?: number | undefined) {
     // };
   }, [fetchProposal]); // Re-run effect if fetchProposal changes (due to chatId change)
 
-  const refreshProposal = useCallback(
-    (chatId?: number) => {
-      fetchProposal(chatId);
-    },
-    [fetchProposal]
-  );
-
   return {
-    proposal: proposalResult?.proposal ?? null,
-    messageId: proposalResult?.messageId,
+    proposalResult: proposalResult,
     isLoading,
     error,
-    refreshProposal, // Expose the refresh function
+    refreshProposal: fetchProposal, // Expose the refresh function
   };
 }

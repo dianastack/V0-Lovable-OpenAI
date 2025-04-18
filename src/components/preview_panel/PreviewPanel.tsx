@@ -1,5 +1,9 @@
 import { useAtom, useAtomValue } from "jotai";
-import { previewModeAtom, selectedAppIdAtom } from "../../atoms/appAtoms";
+import {
+  previewModeAtom,
+  previewPanelKeyAtom,
+  selectedAppIdAtom,
+} from "../../atoms/appAtoms";
 import { useLoadApp } from "@/hooks/useLoadApp";
 import { CodeView } from "./CodeView";
 import { PreviewIframe } from "./PreviewIframe";
@@ -99,14 +103,11 @@ export function PreviewPanel() {
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const { runApp, stopApp, restartApp, error, loading, app } = useRunApp();
   const runningAppIdRef = useRef<number | null>(null);
-  const [key, setKey] = useState(0);
+  const key = useAtomValue(previewPanelKeyAtom);
 
   const handleRestart = useCallback(() => {
-    if (selectedAppId !== null) {
-      restartApp(selectedAppId);
-      setKey((prevKey) => prevKey + 1);
-    }
-  }, [selectedAppId, restartApp]);
+    restartApp();
+  }, [restartApp]);
 
   useEffect(() => {
     const previousAppId = runningAppIdRef.current;

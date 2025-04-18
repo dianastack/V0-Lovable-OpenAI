@@ -25,17 +25,16 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useProposal } from "@/hooks/useProposal";
-import { Proposal } from "@/lib/schemas";
+import {
+  CodeProposal,
+  ActionProposal,
+  Proposal,
+  SuggestedAction,
+  ProposalResult,
+} from "@/lib/schemas";
 import type { Message } from "@/ipc/ipc_types";
 import { isPreviewOpenAtom } from "@/atoms/viewAtoms";
-interface ChatInputActionsProps {
-  proposal: Proposal;
-  onApprove: () => void;
-  onReject: () => void;
-  isApprovable: boolean; // Can be used to enable/disable buttons
-  isApproving: boolean; // State for approving
-  isRejecting: boolean; // State for rejecting
-}
+import { useRunApp } from "@/hooks/useRunApp";
 
 export function ChatInput({ chatId }: { chatId?: number }) {
   const [inputValue, setInputValue] = useAtom(chatInputValueAtom);
@@ -52,12 +51,12 @@ export function ChatInput({ chatId }: { chatId?: number }) {
 
   // Use the hook to fetch the proposal
   const {
-    proposal,
-    messageId,
+    proposalResult,
     isLoading: isProposalLoading,
     error: proposalError,
     refreshProposal,
   } = useProposal(chatId);
+  const { proposal, chatId: proposalChatId, messageId } = proposalResult ?? {};
 
   const adjustHeight = () => {
     const textarea = textareaRef.current;
@@ -205,9 +204,9 @@ export function ChatInput({ chatId }: { chatId?: number }) {
         </div>
       )}
       <div className="p-4">
-        <div className="flex flex-col space-y-2 border border-border rounded-lg bg-(--background-lighter) shadow-sm">
+        <div className="flex flex-col border border-border rounded-lg bg-(--background-lighter) shadow-sm">
           {/* Only render ChatInputActions if proposal is loaded */}
-          {proposal && (
+          {proposal && proposalResult?.chatId === chatId && (
             <ChatInputActions
               proposal={proposal}
               onApprove={handleApprove}
@@ -267,6 +266,47 @@ export function ChatInput({ chatId }: { chatId?: number }) {
   );
 }
 
+function mapActionToButton(action: SuggestedAction) {
+  const { restartApp } = useRunApp();
+  switch (action.id) {
+    case "restart-app":
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          key={action.id}
+          onClick={restartApp}
+        >
+          Restart App
+        </Button>
+      );
+    default:
+      console.error(`Unsupported action: ${action.id}`);
+      return (
+        <Button variant="outline" size="sm" disabled key={action.id}>
+          Unsupported: {action.id}
+        </Button>
+      );
+  }
+}
+
+function ActionProposalActions({ proposal }: { proposal: ActionProposal }) {
+  return (
+    <div className="p-2 pb-0">
+      {proposal.actions.map((action) => mapActionToButton(action))}
+    </div>
+  );
+}
+
+interface ChatInputActionsProps {
+  proposal: Proposal;
+  onApprove: () => void;
+  onReject: () => void;
+  isApprovable: boolean; // Can be used to enable/disable buttons
+  isApproving: boolean; // State for approving
+  isRejecting: boolean; // State for rejecting
+}
+
 // Update ChatInputActions to accept props
 function ChatInputActions({
   proposal,
@@ -279,6 +319,9 @@ function ChatInputActions({
   const [autoApprove, setAutoApprove] = useState(false);
   const [isDetailsVisible, setIsDetailsVisible] = useState(false);
 
+  if (proposal.type === "action-proposal") {
+    return <ActionProposalActions proposal={proposal}></ActionProposalActions>;
+  }
   return (
     <div className="border-b border-border">
       <div className="p-2">

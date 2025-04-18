@@ -16,6 +16,7 @@ import { selectedAppIdAtom } from "@/atoms/appAtoms";
 import { useLoadVersions } from "./useLoadVersions";
 import { showError } from "@/lib/toast";
 import { useProposal } from "./useProposal";
+import { useSearch } from "@tanstack/react-router";
 
 export function getRandomString() {
   return Math.random().toString(36).substring(2, 15);
@@ -31,7 +32,8 @@ export function useStreamChat() {
   const { refreshApp } = useLoadApp(selectedAppId);
   const setStreamCount = useSetAtom(chatStreamCountAtom);
   const { refreshVersions } = useLoadVersions(selectedAppId);
-  const { refreshProposal } = useProposal();
+  const { id: chatId } = useSearch({ from: "/chat" });
+  const { refreshProposal } = useProposal(chatId);
   const streamMessage = useCallback(
     async ({
       prompt,
@@ -91,7 +93,7 @@ export function useStreamChat() {
             if (response.updatedFiles) {
               setIsPreviewOpen(true);
             }
-            refreshProposal(chatId);
+            refreshProposal();
 
             // Keep the same as below
             setIsStreaming(false);

@@ -111,14 +111,26 @@ export interface FileChange {
   summary: string;
 }
 
-// New Proposal interface
-export interface Proposal {
+export interface CodeProposal {
+  type: "code-proposal";
   title: string;
   securityRisks: SecurityRisk[];
   filesChanged: FileChange[];
 }
 
+export interface SuggestedAction {
+  id: "restart-app";
+}
+
+export interface ActionProposal {
+  type: "action-proposal";
+  actions: SuggestedAction[];
+}
+
+export type Proposal = CodeProposal | ActionProposal;
+
 export interface ProposalResult {
   proposal: Proposal;
+  chatId: number;
   messageId: number;
 }

@@ -1,7 +1,13 @@
 import { useState, useCallback } from "react";
 import { IpcClient } from "@/ipc/ipc_client";
-import { appOutputAtom, appUrlAtom, currentAppAtom } from "@/atoms/appAtoms";
-import { useAtom, useSetAtom } from "jotai";
+import {
+  appOutputAtom,
+  appUrlAtom,
+  currentAppAtom,
+  previewPanelKeyAtom,
+  selectedAppIdAtom,
+} from "@/atoms/appAtoms";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { App } from "@/ipc/ipc_types";
 
 export function useRunApp() {
@@ -10,7 +16,8 @@ export function useRunApp() {
   const [app, setApp] = useAtom(currentAppAtom);
   const setAppOutput = useSetAtom(appOutputAtom);
   const [appUrlObj, setAppUrlObj] = useAtom(appUrlAtom);
-
+  const setPreviewPanelKey = useSetAtom(previewPanelKeyAtom);
+  const appId = useAtomValue(selectedAppIdAtom);
   const runApp = useCallback(async (appId: number) => {
     setLoading(true);
     try {
@@ -63,7 +70,10 @@ export function useRunApp() {
     }
   }, []);
 
-  const restartApp = useCallback(async (appId: number) => {
+  const restartApp = useCallback(async () => {
+    if (appId === null) {
+      return;
+    }
     setLoading(true);
     try {
       const ipcClient = IpcClient.getInstance();
@@ -91,6 +101,7 @@ export function useRunApp() {
       console.error(`Error restarting app ${appId}:`, error);
       setError(error instanceof Error ? error : new Error(String(error)));
     } finally {
+      setPreviewPanelKey((prevKey) => prevKey + 1);
       setLoading(false);
     }
   }, []);
