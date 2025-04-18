@@ -220,7 +220,7 @@ function ChatInputActions({
             ) : (
               <ChevronDown size={16} className="mr-1" />
             )}
-            Review: {proposal.title}
+            {proposal.title}
           </button>
           {proposal.securityRisks.length > 0 && (
             <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">
@@ -269,30 +269,32 @@ function ChatInputActions({
 
       {isDetailsVisible && (
         <div className="p-3 border-t border-border bg-muted/50 text-sm">
-          <div className="mb-3">
-            <h4 className="font-semibold mb-1">Security Risks</h4>
-            <ul className="space-y-1">
-              {proposal.securityRisks.map((risk, index) => (
-                <li key={index} className="flex items-start space-x-2">
-                  {risk.type === "warning" ? (
-                    <AlertTriangle
-                      size={16}
-                      className="text-yellow-500 mt-0.5 flex-shrink-0"
-                    />
-                  ) : (
-                    <AlertOctagon
-                      size={16}
-                      className="text-red-500 mt-0.5 flex-shrink-0"
-                    />
-                  )}
-                  <div>
-                    <span className="font-medium">{risk.title}:</span>{" "}
-                    <span>{risk.description}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {!!proposal.securityRisks.length && (
+            <div className="mb-3">
+              <h4 className="font-semibold mb-1">Security Risks</h4>
+              <ul className="space-y-1">
+                {proposal.securityRisks.map((risk, index) => (
+                  <li key={index} className="flex items-start space-x-2">
+                    {risk.type === "warning" ? (
+                      <AlertTriangle
+                        size={16}
+                        className="text-yellow-500 mt-0.5 flex-shrink-0"
+                      />
+                    ) : (
+                      <AlertOctagon
+                        size={16}
+                        className="text-red-500 mt-0.5 flex-shrink-0"
+                      />
+                    )}
+                    <div>
+                      <span className="font-medium">{risk.title}:</span>{" "}
+                      <span>{risk.description}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div>
             <h4 className="font-semibold mb-1">Files Changed</h4>

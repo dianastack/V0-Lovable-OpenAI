@@ -11,20 +11,42 @@ import { getGitAuthor } from "../utils/git_author";
 export function getDyadWriteTags(fullResponse: string): {
   path: string;
   content: string;
+  description?: string;
 }[] {
-  const dyadWriteRegex =
-    /<dyad-write path="([^"]+)"[^>]*>([\s\S]*?)<\/dyad-write>/g;
+  const dyadWriteRegex = /<dyad-write([^>]*)>([\s\S]*?)<\/dyad-write>/gi;
+  const pathRegex = /path="([^"]+)"/;
+  const descriptionRegex = /description="([^"]+)"/;
+
   let match;
-  const tags: { path: string; content: string }[] = [];
+  const tags: { path: string; content: string; description?: string }[] = [];
+
   while ((match = dyadWriteRegex.exec(fullResponse)) !== null) {
-    const content = match[2].trim().split("\n");
-    if (content[0].startsWith("```")) {
-      content.shift();
+    const attributesString = match[1];
+    let content = match[2].trim();
+
+    const pathMatch = pathRegex.exec(attributesString);
+    const descriptionMatch = descriptionRegex.exec(attributesString);
+
+    if (pathMatch && pathMatch[1]) {
+      const path = pathMatch[1];
+      const description = descriptionMatch?.[1];
+
+      const contentLines = content.split("\n");
+      if (contentLines[0]?.startsWith("```")) {
+        contentLines.shift();
+      }
+      if (contentLines[contentLines.length - 1]?.startsWith("```")) {
+        contentLines.pop();
+      }
+      content = contentLines.join("\n");
+
+      tags.push({ path, content, description });
+    } else {
+      console.warn(
+        "Found <dyad-write> tag without a valid 'path' attribute:",
+        match[0]
+      );
     }
-    if (content[content.length - 1].startsWith("```")) {
-      content.pop();
-    }
-    tags.push({ path: match[1], content: content.join("\n") });
   }
   return tags;
 }
@@ -63,6 +85,16 @@ export function getDyadAddDependencyTags(fullResponse: string): string[] {
     packages.push(match[1]);
   }
   return packages;
+}
+
+export function getDyadChatSummaryTag(fullResponse: string): string | null {
+  const dyadChatSummaryRegex =
+    /<dyad-chat-summary>([\s\S]*?)<\/dyad-chat-summary>/g;
+  const match = dyadChatSummaryRegex.exec(fullResponse);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  return null;
 }
 
 export async function processFullResponseActions(
@@ -206,6 +238,7 @@ export async function processFullResponseActions(
       if (deletedFiles.length > 0)
         changes.push(`deleted ${deletedFiles.length} file(s)`);
 
+      // Use chat summary, if provided, or default for commit message
       await git.commit({
         fs,
         dir: appPath,

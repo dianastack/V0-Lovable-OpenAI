@@ -35,7 +35,7 @@ export const messages = sqliteTable("messages", {
   role: text("role", { enum: ["user", "assistant"] }).notNull(),
   content: text("content").notNull(),
   approvalState: text("approval_state", {
-    enum: ["approved", "rejected", "pending"],
+    enum: ["approved", "rejected"],
   }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
