@@ -131,8 +131,8 @@ export class IpcClient {
     return IpcClient.instance;
   }
 
-  public async reloadDyad(): Promise<void> {
-    await this.ipcRenderer.invoke("reload-dyad");
+  public async reloadEnvPath(): Promise<void> {
+    await this.ipcRenderer.invoke("reload-env-path");
   }
 
   // Create a new app with an initial chat

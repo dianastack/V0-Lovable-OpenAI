@@ -1,7 +1,8 @@
 import { ipcMain, app } from "electron";
-import { spawn } from "child_process";
+import { exec, execSync, spawn } from "child_process";
 import { platform, arch } from "os";
 import { NodeSystemInfo } from "../ipc_types";
+import fixPath from "fix-path";
 
 function checkCommandExists(command: string): Promise<string | null> {
   return new Promise((resolve) => {
@@ -68,8 +69,16 @@ export function registerNodeHandlers() {
     return { nodeVersion, pnpmVersion, nodeDownloadUrl };
   });
 
-  ipcMain.handle("reload-dyad", async (): Promise<void> => {
-    app.relaunch();
-    app.exit(0);
+  ipcMain.handle("reload-env-path", async (): Promise<void> => {
+    console.debug("Reloading env path, previously:", process.env.PATH);
+    if (platform() === "win32") {
+      const newPath = execSync("cmd /c echo %PATH%", {
+        encoding: "utf8",
+      }).trim();
+      process.env.PATH = newPath;
+    } else {
+      fixPath();
+    }
+    console.debug("Reloaded env path, now:", process.env.PATH);
   });
 }

@@ -21,6 +21,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { NodeSystemInfo } from "@/ipc/ipc_types";
+
+type NodeInstallStep =
+  | "install"
+  | "waiting-for-continue"
+  | "continue-processing";
+
 export function SetupBanner() {
   const navigate = useNavigate();
   const { isAnyProviderSetup, loading } = useSettings();
@@ -28,7 +34,8 @@ export function SetupBanner() {
     null
   );
   const [nodeCheckError, setNodeCheckError] = useState<boolean>(false);
-  const [nodeInstallLoading, setNodeInstallLoading] = useState<boolean>(false);
+  const [nodeInstallStep, setNodeInstallStep] =
+    useState<NodeInstallStep>("install");
   const checkNode = useCallback(async () => {
     try {
       setNodeCheckError(false);
@@ -52,14 +59,16 @@ export function SetupBanner() {
     });
   };
 
-  const handleNodeInstallClick = async () => {
-    setNodeInstallLoading(true);
+  const handleNodeInstallClick = useCallback(async () => {
+    setNodeInstallStep("waiting-for-continue");
     IpcClient.getInstance().openExternalUrl(nodeSystemInfo!.nodeDownloadUrl);
-  };
+  }, [nodeSystemInfo, setNodeInstallStep]);
 
-  const finishNodeInstallAndRestart = () => {
-    IpcClient.getInstance().reloadDyad();
-  };
+  const finishNodeInstall = useCallback(async () => {
+    setNodeInstallStep("continue-processing");
+    await IpcClient.getInstance().reloadEnvPath();
+    await checkNode();
+  }, [checkNode, setNodeInstallStep]);
 
   const isNodeSetupComplete = Boolean(
     nodeSystemInfo?.nodeVersion && nodeSystemInfo?.pnpmVersion
@@ -123,7 +132,7 @@ export function SetupBanner() {
                 <div className="flex items-center gap-3">
                   {getStatusIcon(isNodeSetupComplete, nodeCheckError)}
                   <span className="font-medium text-sm">
-                    1. Install Node.js
+                    1. Install Node.js (App Runtime)
                   </span>
                 </div>
               </div>
@@ -146,17 +155,37 @@ export function SetupBanner() {
               ) : (
                 <div className="text-sm">
                   <p>Node.js is required to run apps locally.</p>
-                  <p className="mb-3">
-                    After you have installed node.js, click "Finish setup" to
-                    restart Dyad.
-                  </p>
-                  {nodeInstallLoading ? (
-                    <Button onClick={finishNodeInstallAndRestart}>
-                      Finish setup and restart Dyad
+                  {nodeInstallStep === "waiting-for-continue" && (
+                    <p className="mt-1">
+                      After you have installed Node.js, click "Continue". If the
+                      installer didn't work, try{" "}
+                      <a
+                        className="text-blue-500 dark:text-blue-400 hover:underline"
+                        onClick={() => {
+                          IpcClient.getInstance().openExternalUrl(
+                            "https://nodejs.org/en/download"
+                          );
+                        }}
+                      >
+                        more download options
+                      </a>
+                      .
+                    </p>
+                  )}
+                  {nodeInstallStep === "install" ? (
+                    <Button className="mt-3" onClick={handleNodeInstallClick}>
+                      Install Node.js Runtime
                     </Button>
                   ) : (
-                    <Button onClick={handleNodeInstallClick}>
-                      Install Node.js Runtime
+                    <Button className="mt-3" onClick={finishNodeInstall}>
+                      {nodeInstallStep === "continue-processing" ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Checking Node.js setup...
+                        </div>
+                      ) : (
+                        "Continue | I installed Node.js"
+                      )}
                     </Button>
                   )}
                 </div>
