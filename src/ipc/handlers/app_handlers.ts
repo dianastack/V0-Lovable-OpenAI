@@ -573,20 +573,6 @@ export function registerAppHandlers() {
         const appPath = getDyadAppPath(app.path);
 
         try {
-          if (versionId !== "main") {
-            // First check if the version exists
-            const commits = await git.log({
-              fs,
-              dir: appPath,
-              depth: 100,
-            });
-
-            const targetCommit = commits.find((c) => c.oid === versionId);
-            if (!targetCommit) {
-              throw new Error("Target version not found");
-            }
-          }
-
           // Checkout the target commit
           await git.checkout({
             fs,
