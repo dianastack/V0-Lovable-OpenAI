@@ -3,6 +3,7 @@ import type { Message } from "@/ipc/ipc_types";
 import { DyadMarkdownParser } from "./DyadMarkdownParser";
 import { motion } from "framer-motion";
 import { useStreamChat } from "@/hooks/useStreamChat";
+import { CheckCircle, XCircle } from "lucide-react";
 
 interface ChatMessageProps {
   message: Message;
@@ -67,15 +68,17 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           </div>
         )}
         {message.approvalState && (
-          <div className="mt-2 text-xs">
+          <div className="mt-2 flex items-center justify-end space-x-1 text-xs">
             {message.approvalState === "approved" ? (
-              <div className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 p-1 rounded">
-                Approved
-              </div>
+              <>
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span>Approved</span>
+              </>
             ) : message.approvalState === "rejected" ? (
-              <div className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 p-1 rounded">
-                Rejected
-              </div>
+              <>
+                <XCircle className="h-4 w-4 text-red-500" />
+                <span>Rejected</span>
+              </>
             ) : null}
           </div>
         )}
