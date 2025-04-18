@@ -1,5 +1,3 @@
-import type { Message } from "ai";
-
 export interface AppOutput {
   type: "stdout" | "stderr" | "info" | "client-error";
   message: string;
@@ -35,6 +33,13 @@ export interface CreateAppResult {
     updatedAt: string;
   };
   chatId: number;
+}
+
+export interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  approvalState?: "approved" | "rejected";
 }
 
 export interface Chat {

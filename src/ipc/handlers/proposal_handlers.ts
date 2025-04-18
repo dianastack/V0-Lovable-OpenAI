@@ -50,8 +50,16 @@ const getProposalHandler = async (
       columns: {
         id: true, // Fetch the ID
         content: true, // Fetch the content to parse
+        approvalState: true,
       },
     });
+
+    if (
+      latestAssistantMessage?.approvalState === "approved" ||
+      latestAssistantMessage?.approvalState === "rejected"
+    ) {
+      return null;
+    }
 
     if (latestAssistantMessage?.content && latestAssistantMessage.id) {
       const messageId = latestAssistantMessage.id; // Get the message ID

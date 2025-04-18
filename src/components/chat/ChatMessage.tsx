@@ -1,5 +1,5 @@
 import { memo } from "react";
-import type { Message } from "ai";
+import type { Message } from "@/ipc/ipc_types";
 import { DyadMarkdownParser } from "./DyadMarkdownParser";
 import { motion } from "framer-motion";
 import { useStreamChat } from "@/hooks/useStreamChat";
@@ -64,6 +64,19 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
             suppressHydrationWarning
           >
             <DyadMarkdownParser content={message.content} />
+          </div>
+        )}
+        {message.approvalState && (
+          <div className="mt-2 text-xs">
+            {message.approvalState === "approved" ? (
+              <div className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 p-1 rounded">
+                Approved
+              </div>
+            ) : message.approvalState === "rejected" ? (
+              <div className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 p-1 rounded">
+                Rejected
+              </div>
+            ) : null}
           </div>
         )}
       </div>

@@ -1,4 +1,3 @@
-import type { Message } from "ai";
 import type { IpcRenderer } from "electron";
 import {
   type ChatSummary,
@@ -15,6 +14,7 @@ import type {
   CreateAppResult,
   ListAppsResponse,
   NodeSystemInfo,
+  Message,
   Version,
 } from "./ipc_types";
 import type { Proposal } from "@/lib/schemas";

@@ -1,4 +1,4 @@
-import type { Message } from "ai";
+import type { Message } from "@/ipc/ipc_types";
 import { atom } from "jotai";
 import type { ChatSummary } from "@/lib/schemas";
 

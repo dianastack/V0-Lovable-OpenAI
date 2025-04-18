@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { Message } from "ai";
+import type { Message } from "@/ipc/ipc_types";
 import { useAtom, useSetAtom } from "jotai";
 import {
   chatErrorAtom,

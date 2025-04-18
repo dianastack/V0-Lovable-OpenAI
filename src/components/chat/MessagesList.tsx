@@ -1,5 +1,5 @@
 import type React from "react";
-import type { Message } from "ai";
+import type { Message } from "@/ipc/ipc_types";
 import { forwardRef } from "react";
 import ChatMessage from "./ChatMessage";
 import { SetupBanner } from "../SetupBanner";
