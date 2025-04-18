@@ -1,5 +1,6 @@
 import { useAtom, useAtomValue } from "jotai";
 import {
+  appOutputAtom,
   previewModeAtom,
   previewPanelKeyAtom,
   selectedAppIdAtom,
@@ -27,6 +28,12 @@ interface PreviewHeaderProps {
   previewMode: PreviewMode;
   setPreviewMode: (mode: PreviewMode) => void;
   onRestart: () => void;
+}
+
+interface ConsoleHeaderProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  latestMessage?: string;
 }
 
 // Preview Header component with preview mode toggle
@@ -81,16 +88,21 @@ const PreviewHeader = ({
 const ConsoleHeader = ({
   isOpen,
   onToggle,
-}: {
-  isOpen: boolean;
-  onToggle: () => void;
-}) => (
+  latestMessage,
+}: ConsoleHeaderProps) => (
   <div
     onClick={onToggle}
-    className="flex items-center gap-2 px-4 py-1.5 border-t border-border cursor-pointer hover:bg-[var(--background-darkest)] transition-colors"
+    className="flex items-start gap-2 px-4 py-1.5 border-t border-border cursor-pointer hover:bg-[var(--background-darkest)] transition-colors"
   >
-    <Logs size={16} />
-    <span className="text-sm font-medium">System Messages</span>
+    <Logs size={16} className="mt-0.5" />
+    <div className="flex flex-col">
+      <span className="text-sm font-medium">System Messages</span>
+      {!isOpen && latestMessage && (
+        <span className="text-xs text-gray-500 truncate max-w-[200px] md:max-w-[400px]">
+          {latestMessage}
+        </span>
+      )}
+    </div>
     <div className="flex-1" />
     {isOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
   </div>
@@ -104,6 +116,11 @@ export function PreviewPanel() {
   const { runApp, stopApp, restartApp, error, loading, app } = useRunApp();
   const runningAppIdRef = useRef<number | null>(null);
   const key = useAtomValue(previewPanelKeyAtom);
+  const appOutput = useAtomValue(appOutputAtom);
+
+  const messageCount = appOutput.length;
+  const latestMessage =
+    messageCount > 0 ? appOutput[messageCount - 1]?.message : undefined;
 
   const handleRestart = useCallback(() => {
     restartApp();
@@ -183,6 +200,7 @@ export function PreviewPanel() {
                   <ConsoleHeader
                     isOpen={true}
                     onToggle={() => setIsConsoleOpen(false)}
+                    latestMessage={latestMessage}
                   />
                   <Console />
                 </div>
@@ -192,7 +210,11 @@ export function PreviewPanel() {
         </PanelGroup>
       </div>
       {!isConsoleOpen && (
-        <ConsoleHeader isOpen={false} onToggle={() => setIsConsoleOpen(true)} />
+        <ConsoleHeader
+          isOpen={false}
+          onToggle={() => setIsConsoleOpen(true)}
+          latestMessage={latestMessage}
+        />
       )}
     </div>
   );
