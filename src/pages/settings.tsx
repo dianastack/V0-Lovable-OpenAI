@@ -69,7 +69,7 @@ export default function SettingsPage() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <AutoApproveSwitch />
+                <AutoApproveSwitch showToast={false} />
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   This will automatically approve code changes and run them.
                 </div>

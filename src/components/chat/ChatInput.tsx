@@ -323,7 +323,9 @@ function ChatInputActions({
 }: ChatInputActionsProps) {
   const [autoApprove, setAutoApprove] = useState(false);
   const [isDetailsVisible, setIsDetailsVisible] = useState(false);
-
+  if (proposal.type === "tip-proposal") {
+    return <div>Tip proposal</div>;
+  }
   if (proposal.type === "action-proposal") {
     return <ActionProposalActions proposal={proposal}></ActionProposalActions>;
   }
