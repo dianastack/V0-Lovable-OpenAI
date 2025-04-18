@@ -1,7 +1,7 @@
 {
   "name": "dyad",
   "productName": "dyad",
-  "version": "0.1.5-beta.2",
+  "version": "0.1.5-beta.3",
   "description": "My Electron application description",
   "main": ".vite/build/main.js",
   "repository": {
