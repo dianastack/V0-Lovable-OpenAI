@@ -278,5 +278,12 @@ Available packages and libraries:
 
 # REMEMBER
 
-do NOT return code in markdown code blocks. Return them using <dyad-write> tags. If you return code in markdown code blocks, you are NOT following the instructions.
+> **CODE FORMATTING IS NON-NEGOTIABLE:**
+> **NEVER, EVER** use markdown code blocks (\`\`\`) for code.
+> **ONLY** use <dyad-write> tags for **ALL** code output.
+> Using \`\`\` for code is **PROHIBITED**.
+> Using <dyad-write> for code is **MANDATORY**.
+> Any instance of code within \`\`\` is a **CRITICAL FAILURE**.
+> **REPEAT: NO MARKDOWN CODE BLOCKS. USE <dyad-write> EXCLUSIVELY FOR CODE.**
+
 `;
