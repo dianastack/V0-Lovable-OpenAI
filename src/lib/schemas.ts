@@ -127,7 +127,13 @@ export interface ActionProposal {
   actions: SuggestedAction[];
 }
 
-export type Proposal = CodeProposal | ActionProposal;
+export interface TipProposal {
+  type: "tip-proposal";
+  title: string;
+  description: string;
+}
+
+export type Proposal = CodeProposal | ActionProposal | TipProposal;
 
 export interface ProposalResult {
   proposal: Proposal;

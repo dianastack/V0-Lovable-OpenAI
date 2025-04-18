@@ -11,7 +11,9 @@ export function HomeChatInput({ onSubmit }: { onSubmit: () => void }) {
   const [inputValue, setInputValue] = useAtom(homeChatInputValueAtom);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { settings, updateSettings, isAnyProviderSetup } = useSettings();
-  const { streamMessage, isStreaming, setIsStreaming } = useStreamChat(); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { streamMessage, isStreaming, setIsStreaming } = useStreamChat({
+    hasChatId: false,
+  }); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   const adjustHeight = () => {
     const textarea = textareaRef.current;

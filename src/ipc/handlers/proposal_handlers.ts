@@ -51,18 +51,7 @@ const getProposalHandler = async (
       return null;
     }
     if (latestAssistantMessage?.approvalState === "approved") {
-      return {
-        proposal: {
-          type: "action-proposal",
-          actions: [
-            {
-              id: "restart-app",
-            },
-          ],
-        },
-        chatId: chatId,
-        messageId: latestAssistantMessage.id,
-      };
+      return null;
     }
 
     if (latestAssistantMessage?.content && latestAssistantMessage.id) {

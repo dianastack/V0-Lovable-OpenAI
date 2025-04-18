@@ -22,7 +22,9 @@ export function getRandomString() {
   return Math.random().toString(36).substring(2, 15);
 }
 
-export function useStreamChat() {
+export function useStreamChat({
+  hasChatId = true,
+}: { hasChatId?: boolean } = {}) {
   const [messages, setMessages] = useAtom(chatMessagesAtom);
   const [isStreaming, setIsStreaming] = useAtom(isStreamingAtom);
   const [error, setError] = useAtom(chatErrorAtom);
@@ -32,8 +34,14 @@ export function useStreamChat() {
   const { refreshApp } = useLoadApp(selectedAppId);
   const setStreamCount = useSetAtom(chatStreamCountAtom);
   const { refreshVersions } = useLoadVersions(selectedAppId);
-  const { id: chatId } = useSearch({ from: "/chat" });
-  const { refreshProposal } = useProposal(chatId);
+  let chatId: number | undefined;
+
+  if (hasChatId) {
+    const { id } = useSearch({ from: "/chat" });
+    chatId = id;
+  }
+  let { refreshProposal } = hasChatId ? useProposal(chatId) : useProposal();
+
   const streamMessage = useCallback(
     async ({
       prompt,
@@ -93,7 +101,7 @@ export function useStreamChat() {
             if (response.updatedFiles) {
               setIsPreviewOpen(true);
             }
-            refreshProposal();
+            refreshProposal(chatId);
 
             // Keep the same as below
             setIsStreaming(false);

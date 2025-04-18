@@ -20,7 +20,7 @@ export default function HomePage() {
   const { settings, isAnyProviderSetup } = useSettings();
   const setIsPreviewOpen = useSetAtom(isPreviewOpenAtom);
   const [isLoading, setIsLoading] = useState(false);
-  const { streamMessage } = useStreamChat();
+  const { streamMessage } = useStreamChat({ hasChatId: false });
 
   // Get the appId from search params
   const appId = search.appId ? Number(search.appId) : null;

@@ -274,10 +274,11 @@ function mapActionToButton(action: SuggestedAction) {
         <Button
           variant="outline"
           size="sm"
+          className="rounded-xl"
           key={action.id}
           onClick={restartApp}
         >
-          Restart App
+          Restart app
         </Button>
       );
     default:
@@ -292,8 +293,21 @@ function mapActionToButton(action: SuggestedAction) {
 
 function ActionProposalActions({ proposal }: { proposal: ActionProposal }) {
   return (
-    <div className="p-2 pb-0">
-      {proposal.actions.map((action) => mapActionToButton(action))}
+    <div className="border-b border-border p-2 flex items-center justify-between">
+      <div className="flex items-center space-x-2">
+        {proposal.actions.map((action) => mapActionToButton(action))}
+      </div>
+      <AutoApproveSwitch />
+    </div>
+  );
+}
+
+function AutoApproveSwitch() {
+  // const [autoApprove, setAutoApprove] = useAtom(autoApproveAtom);
+  return (
+    <div className="flex items-center space-x-2">
+      <Switch id="auto-approve" />
+      <Label htmlFor="auto-approve">Auto-approve</Label>
     </div>
   );
 }
@@ -376,17 +390,7 @@ function ChatInputActions({
             Reject
           </Button>
           <div className="flex items-center space-x-1 ml-auto">
-            {/* Basic HTML checkbox styled to look like a toggle */}
-            <input
-              type="checkbox"
-              id="auto-approve"
-              checked={autoApprove}
-              onChange={(e) => setAutoApprove(e.target.checked)}
-              className="relative peer shrink-0 appearance-none w-8 h-4 border border-input rounded-full bg-input checked:bg-primary cursor-pointer after:absolute after:w-3 after:h-3 after:top-[1px] after:left-[2px] after:bg-background after:rounded-full after:transition-all checked:after:translate-x-4 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-            />
-            <label htmlFor="auto-approve" className="text-xs cursor-pointer">
-              Auto-approve
-            </label>
+            <AutoApproveSwitch />
           </div>
         </div>
       </div>

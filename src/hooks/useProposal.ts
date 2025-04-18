@@ -8,35 +8,39 @@ export function useProposal(chatId?: number | undefined) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProposal = useCallback(async () => {
-    if (chatId === undefined) {
-      setProposalResult(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    setProposalResult(null); // Reset on new fetch
-    try {
-      // Type assertion might be needed depending on how IpcClient is typed
-      const result = (await IpcClient.getInstance().getProposal(
-        chatId
-      )) as ProposalResult | null;
-
-      if (result) {
-        setProposalResult(result);
-      } else {
-        setProposalResult(null); // Explicitly set to null if IPC returns null
+  const fetchProposal = useCallback(
+    async (overrideChatId?: number) => {
+      chatId = overrideChatId ?? chatId;
+      if (chatId === undefined) {
+        setProposalResult(null);
+        setIsLoading(false);
+        setError(null);
+        return;
       }
-    } catch (err: any) {
-      console.error("Error fetching proposal:", err);
-      setError(err.message || "Failed to fetch proposal");
-      setProposalResult(null); // Clear proposal data on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [chatId]); // Depend on chatId
+      setIsLoading(true);
+      setError(null);
+      setProposalResult(null); // Reset on new fetch
+      try {
+        // Type assertion might be needed depending on how IpcClient is typed
+        const result = (await IpcClient.getInstance().getProposal(
+          chatId
+        )) as ProposalResult | null;
+
+        if (result) {
+          setProposalResult(result);
+        } else {
+          setProposalResult(null); // Explicitly set to null if IPC returns null
+        }
+      } catch (err: any) {
+        console.error("Error fetching proposal:", err);
+        setError(err.message || "Failed to fetch proposal");
+        setProposalResult(null); // Clear proposal data on error
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [chatId]
+  ); // Depend on chatId
 
   useEffect(() => {
     fetchProposal();
