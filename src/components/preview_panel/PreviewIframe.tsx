@@ -1,13 +1,11 @@
 import { selectedAppIdAtom, appUrlAtom, appOutputAtom } from "@/atoms/appAtoms";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { useRunApp } from "@/hooks/useRunApp";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   RefreshCw,
   ExternalLink,
-  Maximize2,
   Loader2,
   X,
   Sparkles,
@@ -25,14 +23,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSettings } from "@/hooks/useSettings";
-import {
-  loadSandpackClient,
-  type SandboxSetup,
-  type ClientOptions,
-  SandpackClient,
-} from "@codesandbox/sandpack-client";
-import { showError } from "@/lib/toast";
-import { SandboxConfig } from "@/ipc/ipc_types";
 
 interface ErrorBannerProps {
   error: string | undefined;
@@ -325,24 +315,14 @@ export const PreviewIframe = ({
         <div className="flex space-x-1">
           <button
             className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:text-gray-300"
-            disabled={
-              !canGoBack ||
-              loading ||
-              !selectedAppId ||
-              settings?.runtimeMode === "web-sandbox"
-            }
+            disabled={!canGoBack || loading || !selectedAppId}
             onClick={handleNavigateBack}
           >
             <ArrowLeft size={16} />
           </button>
           <button
             className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:text-gray-300"
-            disabled={
-              !canGoForward ||
-              loading ||
-              !selectedAppId ||
-              settings?.runtimeMode === "web-sandbox"
-            }
+            disabled={!canGoForward || loading || !selectedAppId}
             onClick={handleNavigateForward}
           >
             <ArrowRight size={16} />
@@ -394,12 +374,6 @@ export const PreviewIframe = ({
         {/* Action Buttons */}
         <div className="flex space-x-1">
           <button
-            title={
-              settings?.runtimeMode === "web-sandbox"
-                ? "Open in browser (disabled in sandbox mode)"
-                : undefined
-            }
-            disabled={settings?.runtimeMode === "web-sandbox"}
             onClick={() => {
               if (appUrl) {
                 IpcClient.getInstance().openExternalUrl(appUrl);
@@ -421,9 +395,7 @@ export const PreviewIframe = ({
           }}
         />
 
-        {settings?.runtimeMode === "web-sandbox" ? (
-          <SandpackIframe reloadKey={reloadKey} iframeRef={iframeRef} />
-        ) : !appUrl ? (
+        {!appUrl ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 bg-gray-50 dark:bg-gray-950">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400 dark:text-gray-500" />
             <p className="text-gray-600 dark:text-gray-300">
@@ -442,121 +414,4 @@ export const PreviewIframe = ({
       </div>
     </div>
   );
-};
-
-const parseTailwindConfig = (config: string) => {
-  const themeRegex = /theme\s*:\s*(\{[\s\S]*?\})(?=\s*,\s*plugins)/;
-  const match = config.match(themeRegex);
-  if (!match) return "{};";
-  return `{theme: ${match[1]}};`;
-};
-
-const SandpackIframe = ({
-  reloadKey,
-  iframeRef,
-}: {
-  reloadKey: number;
-  iframeRef: React.RefObject<HTMLIFrameElement | null>;
-}) => {
-  const [appUrlObj, setAppUrlObj] = useAtom(appUrlAtom);
-  const selectedAppId = useAtomValue(selectedAppIdAtom);
-  const { app } = useLoadApp(selectedAppId);
-  const keyRef = useRef<number | null>(null);
-  const sandpackClientRef = useRef<SandpackClient | null>(null);
-
-  async function loadSandpack() {
-    if (keyRef.current === reloadKey) return;
-    keyRef.current = reloadKey;
-
-    if (!selectedAppId) return;
-    if (sandpackClientRef.current) {
-      sandpackClientRef.current.destroy();
-      sandpackClientRef.current = null;
-    }
-    const sandboxConfig = await IpcClient.getInstance().getAppSandboxConfig(
-      selectedAppId
-    );
-
-    if (!iframeRef.current || !app) return;
-
-    const sandpackConfig: SandboxSetup = mapSandpackConfig(sandboxConfig);
-    const url = "http://localhost:31111";
-    const options: ClientOptions = {
-      bundlerURL: url,
-      showOpenInCodeSandbox: false,
-      showLoadingScreen: true,
-      showErrorScreen: true,
-      externalResources: ["https://cdn.tailwindcss.com"],
-    };
-
-    let client: SandpackClient | undefined;
-    try {
-      client = await loadSandpackClient(
-        iframeRef.current,
-        sandpackConfig,
-        options
-      );
-      setAppUrlObj({
-        appUrl: url,
-        appId: selectedAppId,
-      });
-      sandpackClientRef.current = client;
-      return client;
-    } catch (error) {
-      showError(error);
-    }
-  }
-
-  useEffect(() => {
-    async function updateSandpack() {
-      if (sandpackClientRef.current && selectedAppId) {
-        const sandboxConfig = await IpcClient.getInstance().getAppSandboxConfig(
-          selectedAppId
-        );
-        sandpackClientRef.current.updateSandbox(
-          mapSandpackConfig(sandboxConfig)
-        );
-      }
-    }
-    updateSandpack();
-  }, [app]);
-
-  useEffect(() => {
-    if (!iframeRef.current || !app || !selectedAppId) return;
-    loadSandpack();
-  }, [reloadKey]);
-
-  return (
-    <iframe
-      ref={iframeRef}
-      className="w-full h-full border-none bg-gray-50"
-    ></iframe>
-  );
-};
-
-const mapSandpackConfig = (sandboxConfig: SandboxConfig): SandboxSetup => {
-  return {
-    files: Object.fromEntries(
-      Object.entries(sandboxConfig.files).map(([key, value]) => [
-        key,
-        {
-          code: value.replace(
-            "import './globals.css'",
-            `
-const injectedStyle = document.createElement("style");
-injectedStyle.textContent = \`${sandboxConfig.files["src/globals.css"]}\`;
-injectedStyle.type = "text/tailwindcss";
-document.head.appendChild(injectedStyle);
-
-window.tailwind.config = ${parseTailwindConfig(
-              sandboxConfig.files["tailwind.config.ts"]
-            )}
-`
-          ),
-        },
-      ])
-    ),
-    dependencies: sandboxConfig.dependencies,
-    entry: sandboxConfig.entry,
-  };
 };

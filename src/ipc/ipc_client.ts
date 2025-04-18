@@ -143,18 +143,6 @@ export class IpcClient {
     }
   }
 
-  public async getAppSandboxConfig(appId: number): Promise<SandboxConfig> {
-    try {
-      const data = await this.ipcRenderer.invoke("get-app-sandbox-config", {
-        appId,
-      });
-      return data;
-    } catch (error) {
-      showError(error);
-      throw error;
-    }
-  }
-
   public async getApp(appId: number): Promise<App> {
     try {
       const data = await this.ipcRenderer.invoke("get-app", appId);
@@ -507,14 +495,11 @@ export class IpcClient {
   // Check Node.js and npm status
   public async getNodejsStatus(): Promise<{
     nodeVersion: string | null;
-    npmVersion: string | null;
+    pnpmVersion: string | null;
   }> {
     try {
       const result = await this.ipcRenderer.invoke("nodejs-status");
-      return result as {
-        nodeVersion: string | null;
-        npmVersion: string | null;
-      };
+      return result;
     } catch (error) {
       showError(error);
       throw error;

@@ -91,14 +91,14 @@ export function registerNodeHandlers() {
     "nodejs-status",
     async (): Promise<{
       nodeVersion: string | null;
-      npmVersion: string | null;
+      pnpmVersion: string | null;
     }> => {
       // Run checks in parallel
-      const [nodeVersion, npmVersion] = await Promise.all([
+      const [nodeVersion, pnpmVersion] = await Promise.all([
         checkCommandExists("node"),
-        checkCommandExists("npm"),
+        checkCommandExists("pnpm"),
       ]);
-      return { nodeVersion, npmVersion };
+      return { nodeVersion, pnpmVersion };
     }
   );
 
@@ -129,8 +129,22 @@ export function registerNodeHandlers() {
     if (!result.success) {
       return { success: false, errorMessage: result.errorMessage };
     }
-    console.log("Node.js is setup with version");
+    const nodeVersion = result.output.trim();
+    console.log("Node.js is setup with version", nodeVersion);
 
-    return { success: true, version: result.output };
+    result = await runShell("corepack enable pnpm");
+    if (!result.success) {
+      return { success: false, errorMessage: result.errorMessage };
+    }
+    console.log("Enabled pnpm");
+
+    result = await runShell("pnpm --version");
+    if (!result.success) {
+      return { success: false, errorMessage: result.errorMessage };
+    }
+    const pnpmVersion = result.output.trim();
+    console.log("pnpm is setup with version", pnpmVersion);
+
+    return { success: true, nodeVersion, pnpmVersion };
   });
 }

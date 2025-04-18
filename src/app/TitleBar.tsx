@@ -3,18 +3,6 @@ import { selectedAppIdAtom } from "@/atoms/appAtoms";
 import { useLoadApps } from "@/hooks/useLoadApps";
 import { useRouter } from "@tanstack/react-router";
 import { useSettings } from "@/hooks/useSettings";
-import { RuntimeMode } from "@/lib/schemas";
-
-function formatRuntimeMode(runtimeMode: RuntimeMode | undefined) {
-  switch (runtimeMode) {
-    case "web-sandbox":
-      return "Sandboxed";
-    case "local-node":
-      return "Full Access";
-    default:
-      return runtimeMode;
-  }
-}
 
 export const TitleBar = () => {
   const [selectedAppId] = useAtom(selectedAppIdAtom);
@@ -32,9 +20,7 @@ export const TitleBar = () => {
     <div className="@container z-11 w-full h-8 bg-(--sidebar) absolute top-0 left-0 app-region-drag flex items-center">
       <div className="pl-24"></div>
       <div className="hidden @md:block text-sm font-medium">{displayText}</div>
-      <div className="text-sm font-medium pl-4">
-        {formatRuntimeMode(settings?.runtimeMode)} mode
-      </div>
+
       <div className="flex-1 text-center text-sm font-medium">Dyad</div>
     </div>
   );

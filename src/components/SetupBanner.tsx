@@ -26,6 +26,7 @@ export function SetupBanner() {
   const navigate = useNavigate();
   const { isAnyProviderSetup } = useSettings();
   const [nodeVersion, setNodeVersion] = useState<string | null>(null);
+  const [pnpmVersion, setPnpmVersion] = useState<string | null>(null);
   const [nodeCheckError, setNodeCheckError] = useState<boolean>(false);
   const [nodeInstallError, setNodeInstallError] = useState<string | null>(null);
   const [nodeInstallLoading, setNodeInstallLoading] = useState<boolean>(false);
@@ -34,9 +35,11 @@ export function SetupBanner() {
       setNodeCheckError(false);
       const status = await IpcClient.getInstance().getNodejsStatus();
       setNodeVersion(status.nodeVersion);
+      setPnpmVersion(status.pnpmVersion);
     } catch (error) {
       console.error("Failed to check Node.js status:", error);
       setNodeVersion(null);
+      setPnpmVersion(null);
       setNodeCheckError(true);
     }
   }, [setNodeVersion, setNodeCheckError]);
@@ -60,7 +63,8 @@ export function SetupBanner() {
         showError(result.errorMessage);
         setNodeInstallError(result.errorMessage || "Unknown error");
       } else {
-        setNodeVersion(result.version);
+        setNodeVersion(result.nodeVersion);
+        setPnpmVersion(result.pnpmVersion);
       }
     } catch (error) {
       showError("Failed to install Node.js. " + (error as Error).message);
@@ -72,7 +76,7 @@ export function SetupBanner() {
     }
   };
 
-  const isNodeSetupComplete = !!nodeVersion;
+  const isNodeSetupComplete = !!nodeVersion && !!pnpmVersion;
   const isAiProviderSetup = isAnyProviderSetup();
 
   const itemsNeedAction: string[] = [];
@@ -143,7 +147,9 @@ export function SetupBanner() {
             ) : (
               <div>
                 <p className="text-sm mb-3">
-                  Node.js is required to run apps locally.
+                  Node.js is required to run apps locally. We also use pnpm as
+                  our package manager as it's faster and more efficient than
+                  npm.
                 </p>
                 <Button
                   size="sm"

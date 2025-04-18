@@ -37,7 +37,7 @@ import { getGitAuthor } from "../utils/git_author";
 import killPort from "kill-port";
 import util from "util";
 // Needed, otherwise electron in MacOS/Linux will not be able
-// to find "npm".
+// to find node/pnpm.
 fixPath();
 
 // Keep track of the static file server worker
@@ -54,87 +54,7 @@ async function executeApp({
   appId: number;
   event: Electron.IpcMainInvokeEvent;
 }): Promise<void> {
-  // Return type is void, communication happens via event.sender.send
-  const settings = readSettings();
-  if (settings.runtimeMode === "web-sandbox") {
-    // If server is already running, do nothing.
-    if (staticServerWorker) {
-      console.log(`Static server already running on port ${staticServerPort}`);
-      // No need to send app:output here
-      return;
-    }
-
-    // Start the worker if it's not running
-    console.log(`Starting static file server worker for the first time.`);
-    // No need to send starting status
-
-    const workerScriptPath = path.resolve(
-      __dirname,
-      "../../worker/static_file_server.js"
-    );
-
-    // Check if worker script exists
-    if (!fs.existsSync(workerScriptPath)) {
-      const errorMsg = `Worker script not found at ${workerScriptPath}. Build process might be incomplete.`;
-      console.error(errorMsg);
-      // No need to send error status via event
-      throw new Error(errorMsg);
-    }
-
-    staticServerWorker = new Worker(workerScriptPath, {
-      workerData: {
-        rootDir: path.join(__dirname, "..", "..", "sandpack-generated"), // Use the appPath of the first app run in this mode
-        // Optionally pass other config like port preference
-        // port: 3001 // Example
-      },
-    });
-    // staticServerRootDir = appPath; // Removed
-
-    staticServerWorker.on("message", (message) => {
-      console.log(
-        `Message from static server worker: ${JSON.stringify(message)}`
-      );
-      if (message.status === "ready" && message.port) {
-        staticServerPort = message.port;
-        console.log(`Static file server ready on port ${staticServerPort}`);
-        // No need to send ready status
-      } else if (message.status === "error") {
-        console.error(`Static file server worker error: ${message.message}`);
-        // No need to send error status
-        // Terminate the failed worker
-        staticServerWorker?.terminate();
-        staticServerWorker = null;
-        staticServerPort = null;
-      }
-    });
-
-    staticServerWorker.on("error", (error) => {
-      console.error(`Static file server worker encountered an error:`, error);
-      // No need to send error status
-      staticServerWorker = null; // Worker is likely unusable
-      staticServerPort = null;
-    });
-
-    staticServerWorker.on("exit", (code) => {
-      console.log(`Static file server worker exited with code ${code}`);
-      // Clear state if the worker exits unexpectedly
-      if (staticServerWorker) {
-        // Check avoids race condition if terminated intentionally
-        staticServerWorker = null;
-        staticServerPort = null;
-        // No need to send exit status
-      }
-    });
-
-    return; // Return void
-  }
-  if (settings.runtimeMode === "local-node") {
-    // Ensure worker isn't running if switching modes (optional, depends on desired behavior)
-    // if (staticServerWorker) { await staticServerWorker.terminate(); staticServerWorker = null; staticServerPort = null; }
-    await executeAppLocalNode({ appPath, appId, event });
-    return;
-  }
-  throw new Error(`Invalid runtime mode: ${settings.runtimeMode}`);
+  await executeAppLocalNode({ appPath, appId, event });
 }
 async function executeAppLocalNode({
   appPath,
@@ -145,7 +65,7 @@ async function executeAppLocalNode({
   appId: number;
   event: Electron.IpcMainInvokeEvent;
 }): Promise<void> {
-  const process = spawn("npm install && npm run dev -- --port 32100", [], {
+  const process = spawn("pnpm install && pnpm run dev -- --port 32100", [], {
     cwd: appPath,
     shell: true,
     stdio: "pipe", // Ensure stdio is piped so we can capture output/errors and detect close
@@ -219,40 +139,6 @@ async function killProcessOnPort(port: number): Promise<void> {
 }
 
 export function registerAppHandlers() {
-  ipcMain.handle(
-    "get-app-sandbox-config",
-    async (_, { appId }: { appId: number }): Promise<SandboxConfig> => {
-      const app = await db.query.apps.findFirst({
-        where: eq(apps.id, appId),
-      });
-      if (!app) {
-        throw new Error("App not found");
-      }
-      const appPath = getDyadAppPath(app.path);
-      const files = getFilesRecursively(appPath, appPath);
-
-      const filesMap = await Promise.all(
-        files.map(async (file) => {
-          const content = await fs.promises.readFile(
-            path.join(appPath, file),
-            "utf-8"
-          );
-          return { [file]: content };
-        })
-      );
-
-      // Get dependencies from package.json
-      const packageJsonPath = path.join(appPath, "package.json");
-      const packageJson = await fs.promises.readFile(packageJsonPath, "utf-8");
-      const dependencies = JSON.parse(packageJson).dependencies;
-
-      return {
-        files: filesMap.reduce((acc, file) => ({ ...acc, ...file }), {}),
-        dependencies,
-        entry: "src/main.tsx",
-      };
-    }
-  );
   ipcMain.handle("create-app", async (_, params: CreateAppParams) => {
     const appPath = params.name;
     const fullAppPath = getDyadAppPath(appPath);
@@ -441,21 +327,16 @@ export function registerAppHandlers() {
     console.log(
       `Attempting to stop app ${appId} (local-node only). Current running apps: ${runningApps.size}`
     );
-
-    // Static server worker is NOT terminated here anymore
-
-    // Use withLock for local-node apps
     return withLock(appId, async () => {
       const appInfo = runningApps.get(appId);
 
       if (!appInfo) {
         console.log(
-          `App ${appId} not found in running apps map (local-node). Assuming already stopped or was web-sandbox.`
+          `App ${appId} not found in running apps map (local-node). Assuming already stopped.`
         );
-        // If no local-node app was running, and we terminated the static server above, return success.
         return {
           success: true,
-          message: "App not running in local-node mode.", // Simplified message
+          message: "App not running.",
         };
       }
 
@@ -511,10 +392,7 @@ export function registerAppHandlers() {
               `Stopping local-node app ${appId} (processId ${processId}) before restart` // Adjusted log
             );
 
-            // Use the killProcess utility to stop the process
             await killProcess(process);
-
-            // Remove from running apps
             runningApps.delete(appId);
           } else {
             console.log(
