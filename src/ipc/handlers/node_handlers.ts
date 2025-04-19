@@ -50,7 +50,7 @@ export function registerNodeHandlers() {
       // If not, try to install it using corepack.
       // If both fail, then pnpm is not available.
       checkCommandExists(
-        "pnpm --version || corepack enable pnpm && pnpm --version"
+        "pnpm --version || (corepack enable pnpm && pnpm --version) || (npm install -g pnpm@latest-10 && pnpm --version)"
       ),
     ]);
     // Default to mac download url.
