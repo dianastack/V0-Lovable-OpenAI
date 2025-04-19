@@ -18,9 +18,7 @@ function checkCommandExists(command: string): Promise<string | null> {
 
     process.stderr?.on("data", (data) => {
       // Log stderr but don't treat it as a failure unless the exit code is non-zero
-      console.warn(
-        `Stderr from "${command} --version": ${data.toString().trim()}`
-      );
+      console.warn(`Stderr from "${command}": ${data.toString().trim()}`);
     });
 
     process.on("error", (error) => {
@@ -32,9 +30,7 @@ function checkCommandExists(command: string): Promise<string | null> {
       if (code === 0) {
         resolve(output.trim()); // Command succeeded, return trimmed output
       } else {
-        console.error(
-          `Command "${command} --version" failed with code ${code}`
-        );
+        console.error(`Command "${command}" failed with code ${code}`);
         resolve(null); // Command failed
       }
     });
