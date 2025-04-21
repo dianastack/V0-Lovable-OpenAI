@@ -89,6 +89,8 @@ export const UserSettingsSchema = z.object({
   githubUser: GithubUserSchema.optional(),
   githubAccessToken: SecretSchema.optional(),
   autoApproveChanges: z.boolean().optional(),
+  telemetryConsent: z.enum(["opted_in", "opted_out", "unset"]).optional(),
+  telemetryUserId: z.string().optional(),
   // DEPRECATED.
   runtimeMode: RuntimeModeSchema.optional(),
 });

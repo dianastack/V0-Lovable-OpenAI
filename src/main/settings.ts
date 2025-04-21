@@ -3,6 +3,7 @@ import path from "node:path";
 import { getUserDataPath } from "../paths/paths";
 import { UserSettingsSchema, type UserSettings, Secret } from "../lib/schemas";
 import { safeStorage } from "electron";
+import { v4 as uuidv4 } from "uuid";
 
 // IF YOU NEED TO UPDATE THIS, YOU'RE PROBABLY DOING SOMETHING WRONG!
 // Need to maintain backwards compatibility!
@@ -12,6 +13,8 @@ const DEFAULT_SETTINGS: UserSettings = {
     provider: "auto",
   },
   providerSettings: {},
+  telemetryConsent: "unset",
+  telemetryUserId: uuidv4(),
 };
 
 const SETTINGS_FILE = "user-settings.json";

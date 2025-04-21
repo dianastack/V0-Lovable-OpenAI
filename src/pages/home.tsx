@@ -11,6 +11,9 @@ import { isPreviewOpenAtom } from "@/atoms/viewAtoms";
 import { useState, useEffect } from "react";
 import { useStreamChat } from "@/hooks/useStreamChat";
 import { HomeChatInput } from "@/components/chat/HomeChatInput";
+import { usePostHog } from "posthog-js/react";
+import { PrivacyBanner } from "@/components/TelemetryBanner";
+
 export default function HomePage() {
   const [inputValue, setInputValue] = useAtom(homeChatInputValueAtom);
   const navigate = useNavigate();
@@ -21,7 +24,7 @@ export default function HomePage() {
   const setIsPreviewOpen = useSetAtom(isPreviewOpenAtom);
   const [isLoading, setIsLoading] = useState(false);
   const { streamMessage } = useStreamChat({ hasChatId: false });
-
+  const { capture } = usePostHog();
   // Get the appId from search params
   const appId = search.appId ? Number(search.appId) : null;
 
@@ -50,6 +53,7 @@ export default function HomePage() {
       setSelectedAppId(result.app.id);
       setIsPreviewOpen(false);
       await refreshApps(); // Ensure refreshApps is awaited if it's async
+      capture("home:chat-submit");
       navigate({ to: "/chat", search: { id: result.chatId } });
     } catch (error) {
       console.error("Failed to create chat:", error);
@@ -173,6 +177,7 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+      <PrivacyBanner />
     </div>
   );
 }

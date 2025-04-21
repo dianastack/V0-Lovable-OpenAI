@@ -105,6 +105,7 @@
     "lucide-react": "^0.487.0",
     "monaco-editor": "^0.52.2",
     "openai": "^4.91.1",
+    "posthog-js": "^1.236.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",

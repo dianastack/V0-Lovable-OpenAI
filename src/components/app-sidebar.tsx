@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { ChatList } from "./ChatList";
 import { AppList } from "./AppList";
+import { usePostHog } from "posthog-js/react";
 
 // Menu items.
 const items = [
@@ -123,6 +124,8 @@ function AppIcons({
 }: {
   onHoverChange: (state: HoverState) => void;
 }) {
+  const { capture } = usePostHog();
+
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
 

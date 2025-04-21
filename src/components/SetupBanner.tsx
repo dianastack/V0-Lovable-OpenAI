@@ -21,13 +21,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { NodeSystemInfo } from "@/ipc/ipc_types";
-
+import { usePostHog } from "posthog-js/react";
 type NodeInstallStep =
   | "install"
   | "waiting-for-continue"
   | "continue-processing";
 
 export function SetupBanner() {
+  const { capture } = usePostHog();
   const navigate = useNavigate();
   const { isAnyProviderSetup, loading } = useSettings();
   const [nodeSystemInfo, setNodeSystemInfo] = useState<NodeSystemInfo | null>(
@@ -53,6 +54,7 @@ export function SetupBanner() {
   }, [checkNode]);
 
   const handleAiSetupClick = () => {
+    capture("setup-flow:ai-provider-setup-click");
     navigate({
       to: providerSettingsRoute.id,
       params: { provider: "google" },
@@ -60,11 +62,13 @@ export function SetupBanner() {
   };
 
   const handleNodeInstallClick = useCallback(async () => {
+    capture("setup-flow:start-node-install-click");
     setNodeInstallStep("waiting-for-continue");
     IpcClient.getInstance().openExternalUrl(nodeSystemInfo!.nodeDownloadUrl);
   }, [nodeSystemInfo, setNodeInstallStep]);
 
   const finishNodeInstall = useCallback(async () => {
+    capture("setup-flow:continue-node-install-click");
     setNodeInstallStep("continue-processing");
     await IpcClient.getInstance().reloadEnvPath();
     await checkNode();

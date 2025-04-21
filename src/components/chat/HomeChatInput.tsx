@@ -6,6 +6,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { homeChatInputValueAtom } from "@/atoms/chatAtoms"; // Use a different atom for home input
 import { useAtom } from "jotai";
 import { useStreamChat } from "@/hooks/useStreamChat";
+import { usePostHog } from "posthog-js/react";
 
 export function HomeChatInput({ onSubmit }: { onSubmit: () => void }) {
   const [inputValue, setInputValue] = useAtom(homeChatInputValueAtom);
@@ -14,7 +15,6 @@ export function HomeChatInput({ onSubmit }: { onSubmit: () => void }) {
   const { streamMessage, isStreaming, setIsStreaming } = useStreamChat({
     hasChatId: false,
   }); // eslint-disable-line @typescript-eslint/no-unused-vars
-
   const adjustHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {

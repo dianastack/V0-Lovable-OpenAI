@@ -36,8 +36,9 @@ import type { Message } from "@/ipc/ipc_types";
 import { isPreviewOpenAtom } from "@/atoms/viewAtoms";
 import { useRunApp } from "@/hooks/useRunApp";
 import { AutoApproveSwitch } from "../AutoApproveSwitch";
-
+import { usePostHog } from "posthog-js/react";
 export function ChatInput({ chatId }: { chatId?: number }) {
+  const { capture } = usePostHog();
   const [inputValue, setInputValue] = useAtom(chatInputValueAtom);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { settings, updateSettings, isAnyProviderSetup } = useSettings();
@@ -104,6 +105,7 @@ export function ChatInput({ chatId }: { chatId?: number }) {
     const currentInput = inputValue;
     setInputValue("");
     await streamMessage({ prompt: currentInput, chatId });
+    capture("chat:submit");
   };
 
   const handleCancel = () => {
@@ -124,6 +126,7 @@ export function ChatInput({ chatId }: { chatId?: number }) {
       `Approving proposal for chatId: ${chatId}, messageId: ${messageId}`
     );
     setIsApproving(true);
+    capture("chat:approve");
     try {
       const result = await IpcClient.getInstance().approveProposal({
         chatId,
@@ -157,6 +160,7 @@ export function ChatInput({ chatId }: { chatId?: number }) {
       `Rejecting proposal for chatId: ${chatId}, messageId: ${messageId}`
     );
     setIsRejecting(true);
+    capture("chat:reject");
     try {
       const result = await IpcClient.getInstance().rejectProposal({
         chatId,

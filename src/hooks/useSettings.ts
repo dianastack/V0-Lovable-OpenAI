@@ -13,6 +13,17 @@ const PROVIDER_TO_ENV_VAR: Record<string, string> = {
 // Define a type for the environment variables we expect
 type EnvVars = Record<string, string | undefined>;
 
+const TELEMETRY_CONSENT_KEY = "dyadTelemetryConsent";
+const TELEMETRY_USER_ID_KEY = "dyadTelemetryUserId";
+
+export function isTelemetryOptedIn() {
+  return window.localStorage.getItem(TELEMETRY_CONSENT_KEY) === "opted_in";
+}
+
+export function getTelemetryUserId(): string | null {
+  return window.localStorage.getItem(TELEMETRY_USER_ID_KEY);
+}
+
 export function useSettings() {
   const [settings, setSettingsAtom] = useAtom(userSettingsAtom);
   const [envVars, setEnvVarsAtom] = useAtom(envVarsAtom);
@@ -49,6 +60,23 @@ export function useSettings() {
       const ipcClient = IpcClient.getInstance();
       const updatedSettings = await ipcClient.setUserSettings(newSettings);
       setSettingsAtom(updatedSettings);
+      if (updatedSettings.telemetryConsent) {
+        window.localStorage.setItem(
+          TELEMETRY_CONSENT_KEY,
+          updatedSettings.telemetryConsent
+        );
+      } else {
+        window.localStorage.removeItem(TELEMETRY_CONSENT_KEY);
+      }
+      if (updatedSettings.telemetryUserId) {
+        window.localStorage.setItem(
+          TELEMETRY_USER_ID_KEY,
+          updatedSettings.telemetryUserId
+        );
+      } else {
+        window.localStorage.removeItem(TELEMETRY_USER_ID_KEY);
+      }
+
       setError(null);
       return updatedSettings;
     } catch (error) {
