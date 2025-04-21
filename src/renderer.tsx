@@ -6,8 +6,10 @@ import { PostHogProvider } from "posthog-js/react";
 import posthog from "posthog-js";
 import { getTelemetryUserId, isTelemetryOptedIn } from "./hooks/useSettings";
 
+// @ts-ignore
 const posthogClient = posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_KEY, {
   api_host: "https://us.i.posthog.com",
+  // @ts-ignore
   debug: import.meta.env.MODE === "development",
   autocapture: false,
   capture_pageview: false,
