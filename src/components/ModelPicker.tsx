@@ -19,7 +19,7 @@ import {
 import { useEffect, useState } from "react";
 import { MODEL_OPTIONS } from "@/constants/models";
 import { useLocalModels } from "@/hooks/useLocalModels";
-import { ChevronDown, RefreshCw } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 interface ModelPickerProps {
   selectedModel: LargeLanguageModel;
@@ -141,7 +141,7 @@ export function ModelPicker({
             disabled={localModelsLoading || !hasLocalModels}
             className="w-full font-normal"
           >
-            <div className="flex flex-col items-start flex-1">
+            <div className="flex flex-col items-start">
               <span>Local models (Ollama)</span>
               {localModelsLoading ? (
                 <span className="text-xs text-muted-foreground">
@@ -157,15 +157,6 @@ export function ModelPicker({
                 </span>
               )}
             </div>
-            <RefreshCw
-              className={`h-3.5 w-3.5 text-muted-foreground hover:text-foreground ${
-                localModelsLoading ? "animate-spin" : ""
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                loadModels();
-              }}
-            />
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-56">
             <DropdownMenuLabel>Ollama Models</DropdownMenuLabel>
