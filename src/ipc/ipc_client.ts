@@ -18,6 +18,7 @@ import type {
   Version,
   SystemDebugInfo,
   LocalModel,
+  LocalModelListResponse,
 } from "./ipc_types";
 import type { CodeProposal, ProposalResult } from "@/lib/schemas";
 import { showError } from "@/lib/toast";
@@ -739,13 +740,13 @@ export class IpcClient {
   }
 
   public async listLocalModels(): Promise<LocalModel[]> {
-    try {
-      const models = await this.ipcRenderer.invoke("local-models:list");
-      return models;
-    } catch (error) {
-      showError(error);
-      throw error;
+    const { models, error } = (await this.ipcRenderer.invoke(
+      "local-models:list"
+    )) as LocalModelListResponse;
+    if (error) {
+      throw new Error(error);
     }
+    return models;
   }
 
   // Listen for deep link events
