@@ -17,6 +17,7 @@ import type {
   Message,
   Version,
   SystemDebugInfo,
+  LocalModel,
 } from "./ipc_types";
 import type { CodeProposal, ProposalResult } from "@/lib/schemas";
 import { showError } from "@/lib/toast";
@@ -729,8 +730,18 @@ export class IpcClient {
   // Get system debug information
   public async getSystemDebugInfo(): Promise<SystemDebugInfo> {
     try {
-      const result = await this.ipcRenderer.invoke("get-system-debug-info");
-      return result;
+      const data = await this.ipcRenderer.invoke("get-system-debug-info");
+      return data;
+    } catch (error) {
+      showError(error);
+      throw error;
+    }
+  }
+
+  public async listLocalModels(): Promise<LocalModel[]> {
+    try {
+      const models = await this.ipcRenderer.invoke("local-models:list");
+      return models;
     } catch (error) {
       showError(error);
       throw error;
