@@ -1,15 +1,12 @@
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Settings, Sparkles } from "lucide-react";
-import { useRouter } from "@tanstack/react-router";
-import { providerSettingsRoute } from "@/routes/settings/providers/$provider";
+import { CheckCircle, Sparkles } from "lucide-react";
 
 interface DyadProSuccessDialogProps {
   isOpen: boolean;
@@ -20,8 +17,6 @@ export function DyadProSuccessDialog({
   isOpen,
   onClose,
 }: DyadProSuccessDialogProps) {
-  const { navigate } = useRouter();
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
