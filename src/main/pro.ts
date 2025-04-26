@@ -6,8 +6,8 @@ export function handleDyadProReturn({
   maxBudget,
 }: {
   apiKey: string;
-  budgetResetAt: string;
-  maxBudget: number;
+  budgetResetAt: string | null | undefined;
+  maxBudget: number | null | undefined;
 }) {
   const settings = readSettings();
   writeSettings({
@@ -20,10 +20,13 @@ export function handleDyadProReturn({
         },
       },
     },
-    dyadProBudget: {
-      budgetResetAt,
-      maxBudget,
-    },
+    dyadProBudget:
+      budgetResetAt && maxBudget
+        ? {
+            budgetResetAt,
+            maxBudget,
+          }
+        : undefined,
     enableDyadPro: true,
   });
 }

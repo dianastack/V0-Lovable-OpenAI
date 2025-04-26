@@ -193,7 +193,7 @@ function handleDeepLinkReturn(url: string) {
     // budget_reset_at: '2025-05-26T16:31:13.492000Z'
     const budgetResetAt = parsed.searchParams.get("budget_reset_at");
     const maxBudget = Number(parsed.searchParams.get("max_budget"));
-    if (!apiKey || !budgetResetAt || !maxBudget) {
+    if (!apiKey) {
       dialog.showErrorBox(
         "Invalid URL",
         "Expected key, budget_reset_at, and max_budget"
