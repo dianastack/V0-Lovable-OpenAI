@@ -1,4 +1,7 @@
 // e.g. [dyad-qa=add-dep]
+
+import { ModelResponse } from "../ipc_types";
+
 // Canned responses for test prompts
 const TEST_RESPONSES: Record<string, string> = {
   "add-dep": `I'll add that dependency for you.
@@ -47,7 +50,7 @@ export async function streamTestResponse(
   testResponse: string,
   abortController: AbortController,
   updatedChat: any
-): Promise<string> {
+): Promise<ModelResponse> {
   console.log(`Using canned response for test prompt`);
 
   // Simulate streaming by splitting the response into chunks
@@ -79,5 +82,5 @@ export async function streamTestResponse(
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
 
-  return fullResponse;
+  return { content: fullResponse, reasoning: "" };
 }

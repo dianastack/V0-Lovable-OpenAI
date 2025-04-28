@@ -104,6 +104,8 @@ function preprocessUnclosedTags(content: string): {
     }
 
     const openCount = openingMatches.length;
+    console.log("PROCESSED CONTENT", processedContent);
+    console.log("PCONTENT MATH", processedContent.match);
     const closeCount = (processedContent.match(closeTagPattern) || []).length;
 
     // If we have more opening than closing tags

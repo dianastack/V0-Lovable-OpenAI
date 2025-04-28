@@ -73,6 +73,7 @@ export function useStreamChat({
               id: getRandomNumberId(),
               role: "assistant",
               content: "",
+              reasoning: null,
             },
           ];
         }
@@ -82,11 +83,13 @@ export function useStreamChat({
             id: getRandomNumberId(),
             role: "user",
             content: prompt,
+            reasoning: null,
           },
           {
             id: getRandomNumberId(),
             role: "assistant",
             content: "",
+            reasoning: null,
           },
         ];
       });

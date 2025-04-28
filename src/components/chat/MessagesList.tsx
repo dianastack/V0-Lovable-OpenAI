@@ -48,7 +48,7 @@ export const MessagesList = forwardRef<HTMLDivElement, MessagesListProps>(
                 const lastUserMessage = [...messages]
                   .reverse()
                   .find((message) => message.role === "user");
-                if (!lastUserMessage) {
+                if (!lastUserMessage || !lastUserMessage.content) {
                   console.error("No user message found");
                   return;
                 }

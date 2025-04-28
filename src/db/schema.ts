@@ -35,6 +35,7 @@ export const messages = sqliteTable("messages", {
     .references(() => chats.id, { onDelete: "cascade" }),
   role: text("role", { enum: ["user", "assistant"] }).notNull(),
   content: text("content").notNull(),
+  reasoning: text("reasoning"),
   approvalState: text("approval_state", {
     enum: ["approved", "rejected"],
   }),

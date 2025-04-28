@@ -11,6 +11,7 @@ interface ChatMessageProps {
 
 const ChatMessage = ({ message }: ChatMessageProps) => {
   const { isStreaming } = useStreamChat();
+  console.log("message", message);
   return (
     <div
       className={`flex ${
@@ -24,7 +25,10 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
             : "bg-(--sidebar-accent)"
         }`}
       >
-        {message.role === "assistant" && !message.content && isStreaming ? (
+        {message.role === "assistant" &&
+        !message.reasoning &&
+        !message.content &&
+        isStreaming ? (
           <div className="flex h-6 items-center space-x-2 p-2">
             <motion.div
               className="h-3 w-3 rounded-full bg-(--primary) dark:bg-blue-500"
@@ -64,7 +68,10 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
             className="prose dark:prose-invert prose-headings:mb-2 prose-p:my-1 prose-pre:my-0 max-w-none"
             suppressHydrationWarning
           >
-            <DyadMarkdownParser content={message.content} />
+            {message.reasoning && <ReasoningBox message={message.reasoning} />}
+            {message.content && (
+              <DyadMarkdownParser content={message.content} />
+            )}
           </div>
         )}
         {message.approvalState && (
@@ -86,5 +93,20 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
     </div>
   );
 };
+
+function ReasoningBox({ message }: { message: string }) {
+  return (
+    <div className="mb-2 flex items-center justify-between rounded-md bg-gray-100 p-2 dark:bg-gray-800">
+      <div className="flex items-center space-x-2">
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          Reasoning
+        </span>
+      </div>
+      <div className="ml-2 flex-grow">
+        <DyadMarkdownParser content={message} />
+      </div>
+    </div>
+  );
+}
 
 export default ChatMessage;

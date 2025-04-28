@@ -25,7 +25,9 @@ export async function executeAddDependency({
     }
   );
   const installResults = stdout + (stderr ? `\n${stderr}` : "");
-
+  if (!message.content) {
+    throw new Error("Cannot execute add dependency on null content");
+  }
   // Update the message content with the installation results
   const updatedContent = message.content.replace(
     new RegExp(

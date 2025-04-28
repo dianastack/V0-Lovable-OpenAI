@@ -10,7 +10,12 @@ import {
 } from "../../prompts/supabase_prompt";
 import { getDyadAppPath } from "../../paths/paths";
 import { readSettings } from "../../main/settings";
-import type { ChatResponseEnd, ChatStreamParams } from "../ipc_types";
+import type {
+  ChatResponseEnd,
+  ChatStreamParams,
+  Message,
+  ModelResponse,
+} from "../ipc_types";
 import { extractCodebase } from "../../utils/codebase";
 import { processFullResponseActions } from "../processors/response_processor";
 import { streamTestResponse } from "./testing_chat_handlers";
@@ -28,7 +33,7 @@ const logger = log.scope("chat_stream_handlers");
 const activeStreams = new Map<number, AbortController>();
 
 // Track partial responses for cancelled streams
-const partialResponses = new Map<number, string>();
+const partialResponses = new Map<number, ModelResponse>();
 
 export function registerChatStreamHandlers() {
   ipcMain.handle("chat:stream", async (event, req: ChatStreamParams) => {
@@ -111,7 +116,10 @@ export function registerChatStreamHandlers() {
         throw new Error(`Chat not found: ${req.chatId}`);
       }
 
-      let fullResponse = "";
+      let fullResponse: ModelResponse = {
+        content: "",
+        reasoning: "",
+      };
 
       // Check if this is a test prompt
       const testResponse = getTestResponse(req.prompt);
@@ -183,6 +191,12 @@ export function registerChatStreamHandlers() {
             },
             ...messageHistory,
           ],
+          onChunk: ({ chunk }) => {
+            if (chunk.type === "reasoning") {
+              fullResponse.reasoning += chunk.textDelta;
+            }
+            // Send the chunk to the renderer process
+          },
           onError: (error) => {
             logger.error("Error streaming text:", error);
             const message =
@@ -200,15 +214,15 @@ export function registerChatStreamHandlers() {
         // Process the stream as before
         try {
           for await (const textPart of textStream) {
-            fullResponse += textPart;
+            fullResponse.content += textPart;
             if (
-              fullResponse.includes("$$SUPABASE_CLIENT_CODE$$") &&
+              fullResponse.content.includes("$$SUPABASE_CLIENT_CODE$$") &&
               updatedChat.app?.supabaseProjectId
             ) {
               const supabaseClientCode = await getSupabaseClientCode({
                 projectId: updatedChat.app?.supabaseProjectId,
               });
-              fullResponse = fullResponse.replace(
+              fullResponse.content = fullResponse.content.replace(
                 "$$SUPABASE_CLIENT_CODE$$",
                 supabaseClientCode
               );
@@ -216,16 +230,18 @@ export function registerChatStreamHandlers() {
             // Store the current partial response
             partialResponses.set(req.chatId, fullResponse);
 
-            // Update the assistant message in the database
+            // Send the current accumulated response
             event.sender.send("chat:response:chunk", {
               chatId: req.chatId,
               messages: [
                 ...updatedChat.messages,
                 {
                   role: "assistant",
-                  content: fullResponse,
+                  id: 9999999,
+                  content: fullResponse.content,
+                  reasoning: fullResponse.reasoning,
                 },
-              ],
+              ] satisfies Message[],
             });
 
             // If the stream was aborted, exit early
@@ -266,7 +282,7 @@ export function registerChatStreamHandlers() {
       // Only save the response and process it if we weren't aborted
       if (!abortController.signal.aborted && fullResponse) {
         // Scrape from: <dyad-chat-summary>Renaming profile file</dyad-chat-title>
-        const chatTitle = fullResponse.match(
+        const chatTitle = fullResponse.content.match(
           /<dyad-chat-summary>(.*?)<\/dyad-chat-summary>/
         );
         if (chatTitle) {
@@ -283,13 +299,14 @@ export function registerChatStreamHandlers() {
           .values({
             chatId: req.chatId,
             role: "assistant",
-            content: fullResponse,
+            content: fullResponse.content,
+            reasoning: fullResponse.reasoning,
           })
           .returning();
 
         if (readSettings().autoApproveChanges) {
           const status = await processFullResponseActions(
-            fullResponse,
+            fullResponse.content,
             req.chatId,
             { chatSummary, messageId: assistantMessage.id }
           );

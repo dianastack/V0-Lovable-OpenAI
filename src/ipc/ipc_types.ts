@@ -38,7 +38,8 @@ export interface CreateAppResult {
 export interface Message {
   id: number;
   role: "user" | "assistant";
-  content: string;
+  content: string | null;
+  reasoning: string | null;
   approvalState?: "approved" | "rejected" | null;
 }
 
@@ -101,3 +102,8 @@ export type LocalModelListResponse = {
   models: LocalModel[];
   error: string | null;
 };
+
+export interface ModelResponse {
+  content: string;
+  reasoning: string;
+}
