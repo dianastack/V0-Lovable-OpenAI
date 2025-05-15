@@ -165,7 +165,7 @@ const LOCAL_PROVIDERS: Record<
     hasFreeTier: true,
   },
   lmstudio: {
-    displayName: "LMS tudio",
+    displayName: "LM Studio",
     hasFreeTier: true,
   },
 };
