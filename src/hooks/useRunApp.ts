@@ -41,10 +41,12 @@ export function useRunApp() {
       setApp(app);
       await ipcClient.runApp(appId, (output) => {
         setAppOutput((prev) => [...prev, output]);
-        // Check if the output contains a localhost URL
-        const urlMatch = output.message.match(/(https?:\/\/localhost:\d+\/?)/);
-        if (urlMatch) {
-          setAppUrlObj({ appUrl: urlMatch[1], appId });
+        const matchesProxyServerStart = output.message.includes(
+          "[dyad-proxy-server]started=",
+        );
+        if (matchesProxyServerStart) {
+          const proxyUrl = output.message.split("=")[1];
+          setAppUrlObj({ appUrl: proxyUrl, appId });
         }
       });
       setPreviewErrorMessage(undefined);
