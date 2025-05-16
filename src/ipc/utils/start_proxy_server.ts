@@ -2,8 +2,9 @@
 
 import { Worker } from "worker_threads";
 import path from "path";
+import { findAvailablePort } from "./port_utils";
 
-export function startProxy(
+export async function startProxy(
   targetOrigin: string,
   opts: {
     // host?: string;
@@ -14,10 +15,10 @@ export function startProxy(
 ) {
   if (!/^https?:\/\//.test(targetOrigin))
     throw new Error("startProxy: targetOrigin must be absolute http/https URL");
-
+  const port = await findAvailablePort(30000, 32000);
+  console.log("Found available port", port);
   const {
     // host = "localhost",
-    // port = 31111,
     // env = {}, // additional env vars to pass to the worker
     onStarted,
   } = opts;
@@ -29,11 +30,10 @@ export function startProxy(
         ...process.env, // inherit parent env
 
         TARGET_URL: targetOrigin,
-        LISTEN_HOST: "localhost",
-        LISTEN_PORT: "31111",
       },
       workerData: {
         targetOrigin,
+        port,
       },
     },
   );

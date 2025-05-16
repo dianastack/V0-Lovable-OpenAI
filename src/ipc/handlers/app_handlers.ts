@@ -57,6 +57,7 @@ async function executeApp({
 }): Promise<void> {
   if (proxyWorker) {
     proxyWorkerTerminate = null;
+    console.log("proxyWorker.terminate", proxyWorker.terminate);
     proxyWorkerTerminate = proxyWorker.terminate();
     proxyWorker = null;
   }
@@ -115,7 +116,7 @@ async function executeAppLocalNode({
       if (proxyWorkerTerminate) {
         await proxyWorkerTerminate;
       }
-      proxyWorker = startProxy(urlMatch[1], {
+      proxyWorker = await startProxy(urlMatch[1], {
         onStarted: (proxyUrl) => {
           event.sender.send("app:output", {
             type: "stdout",

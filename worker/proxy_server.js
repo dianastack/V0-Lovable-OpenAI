@@ -38,8 +38,7 @@ const path = require("path");
 
 /* ─────────────────── configuration (main thread only) ─────────────────── */
 
-const LISTEN_HOST = process.env.LISTEN_HOST || "localhost";
-const LISTEN_PORT = Number(process.env.LISTEN_PORT || 31111);
+const LISTEN_HOST = "localhost";
 
 if (isMainThread) {
   // Stand-alone mode: fork the worker and pass through the env as-is
@@ -58,6 +57,7 @@ if (isMainThread) {
 
 /* ──────────────────────────── worker code ─────────────────────────────── */
 
+const LISTEN_PORT = process.env.LISTEN_PORT || workerData.port;
 let rememberedOrigin = null; // e.g. "http://localhost:5173"
 
 /* ---------- pre-configure rememberedOrigin from env or workerData ------- */
