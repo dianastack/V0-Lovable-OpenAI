@@ -28,10 +28,11 @@ const https = require("https");
 const net = require("net");
 const tls = require("tls");
 const { URL } = require("url");
+const fs = require("fs");
+const path = require("path");
 
 const LISTEN_HOST = "127.0.0.1";
 const LISTEN_PORT = 31111;
-const INJECT_TAG = '<script>console.log("injected!!")</script>';
 
 if (isMainThread) {
   const w = new Worker(__filename);
@@ -46,23 +47,75 @@ if (isMainThread) {
 
 let rememberedOrigin = null; // e.g. "http://localhost:5173"
 
-function needsInjection(pathname, headers) {
-  const html = (headers["content-type"] || "").includes("text/html");
-  const enc = (headers["content-encoding"] || "").toLowerCase();
-  return pathname.endsWith("/");
-  return (
-    html && (!enc || enc === "identity") && pathname.endsWith("index.html")
+let stacktraceJsContent = null;
+let dyadShimContent = null;
+
+try {
+  const stackTraceLibPath = path.join(
+    __dirname,
+    "..",
+    "node_modules",
+    "stacktrace-js",
+    "dist",
+    "stacktrace.min.js",
   );
+  stacktraceJsContent = fs.readFileSync(stackTraceLibPath, "utf-8");
+  parentPort?.postMessage("[proxy-worker] stacktrace.js loaded.");
+} catch (error) {
+  parentPort?.postMessage(
+    `[proxy-worker] Failed to read stacktrace.js: ${error.message}`,
+  );
+  console.error(`[proxy-worker] Failed to read stacktrace.js:`, error);
+}
+
+try {
+  const dyadShimPath = path.join(__dirname, "dyad-shim.js");
+  dyadShimContent = fs.readFileSync(dyadShimPath, "utf-8");
+  parentPort?.postMessage("[proxy-worker] dyad-shim.js loaded.");
+} catch (error) {
+  parentPort?.postMessage(
+    `[proxy-worker] Failed to read dyad-shim.js: ${error.message}`,
+  );
+  console.error(`[proxy-worker] Failed to read dyad-shim.js:`, error);
+}
+
+function needsInjection(pathname) {
+  return pathname.endsWith("index.html") || pathname === "/";
 }
 
 function injectHTML(buf) {
   let txt = buf.toString("utf8");
-  if (!txt.includes(INJECT_TAG)) {
-    txt = txt.includes("</body>")
-      ? txt.replace("</body>", INJECT_TAG + "</body>")
-      : txt + INJECT_TAG;
+  console.log("Injecting HTML", txt);
+  const scriptsToInject = [];
+
+  if (stacktraceJsContent) {
+    scriptsToInject.push(`<script>${stacktraceJsContent}</script>`);
+  } else {
+    scriptsToInject.push(
+      '<script>console.warn("[proxy-worker] stacktrace.js library was not injected.");</script>',
+    );
   }
-  console.log("INJECT txt", txt);
+
+  if (dyadShimContent) {
+    scriptsToInject.push(`<script>${dyadShimContent}</script>`);
+  } else {
+    scriptsToInject.push(
+      '<script>console.warn("[proxy-worker] dyad shim was not injected.");</script>',
+    );
+  }
+
+  const allScripts = scriptsToInject.join("\n");
+
+  const headRegex = /<head[^>]*>/i;
+  if (headRegex.test(txt)) {
+    txt = txt.replace(headRegex, `$&\n${allScripts}`);
+  } else {
+    // Fallback if <head> tag is not found, prepend to the whole document.
+    txt = allScripts + "\n" + txt;
+    parentPort?.postMessage(
+      "[proxy-worker] Warning: <head> tag not found in HTML, prepending scripts to document start.",
+    );
+  }
   return Buffer.from(txt, "utf8");
 }
 
@@ -115,6 +168,11 @@ const server = http.createServer((clientReq, clientRes) => {
     }
   }
 
+  if (headers["if-none-match"] && needsInjection(target.pathname)) {
+    console.log("deleting if-none-match");
+    delete headers["if-none-match"];
+  }
+
   const upOpts = {
     protocol: target.protocol,
     hostname: target.hostname,
@@ -126,7 +184,7 @@ const server = http.createServer((clientReq, clientRes) => {
 
   const upReq = lib.request(upOpts, (upRes) => {
     const inject = needsInjection(target.pathname, upRes.headers);
-
+    // console.log("inject", inject, "pathname", target.pathname);
     if (!inject) {
       clientRes.writeHead(upRes.statusCode, upRes.headers);
       upRes.pipe(clientRes);
@@ -138,14 +196,20 @@ const server = http.createServer((clientReq, clientRes) => {
     upRes.on("end", () => {
       try {
         const merged = Buffer.concat(chunks);
-        console.log("merged", merged);
-        const patched = injectHTML(merged);
+        const alreadyInjected =
+          merged.includes("window-error") &&
+          merged.includes("unhandled-rejection");
+        if (alreadyInjected) {
+          console.log("Site already injected with dyad shim, skipping.");
+        }
+        // console.log("merged", merged); // Verbose
+        const patched = alreadyInjected ? merged : injectHTML(merged);
         const hdrs = {
           ...upRes.headers,
           "content-length": Buffer.byteLength(patched),
         };
         clientRes.writeHead(upRes.statusCode, hdrs);
-        console.log("patched", patched.toString("utf8"));
+        // console.log("patched", patched.toString("utf8")); // Verbose
         clientRes.end(patched);
       } catch (e) {
         clientRes.writeHead(500, { "content-type": "text/plain" });
