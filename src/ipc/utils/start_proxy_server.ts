@@ -3,6 +3,9 @@
 import { Worker } from "worker_threads";
 import path from "path";
 import { findAvailablePort } from "./port_utils";
+import log from "electron-log";
+
+const logger = log.scope("start_proxy_server");
 
 export async function startProxy(
   targetOrigin: string,
@@ -15,8 +18,8 @@ export async function startProxy(
 ) {
   if (!/^https?:\/\//.test(targetOrigin))
     throw new Error("startProxy: targetOrigin must be absolute http/https URL");
-  const port = await findAvailablePort(30000, 32000);
-  console.log("Found available port", port);
+  const port = await findAvailablePort(50_000, 60_000);
+  logger.info("Found available port", port);
   const {
     // host = "localhost",
     // env = {}, // additional env vars to pass to the worker
@@ -39,16 +42,14 @@ export async function startProxy(
   );
 
   worker.on("message", (m) => {
-    console.log("[proxy]", m);
+    logger.info("[proxy]", m);
     if (typeof m === "string" && m.startsWith("proxy-server-start url=")) {
       const url = m.substring("proxy-server-start url=".length);
       onStarted?.(url);
     }
   });
-  worker.on("error", (e) => console.error("[proxy] error:", e));
-  worker.on("exit", (c) => console.log("[proxy] exit", c));
+  worker.on("error", (e) => logger.error("[proxy] error:", e));
+  worker.on("exit", (c) => logger.info("[proxy] exit", c));
 
   return worker; // let the caller keep a handle if desired
 }
-
-module.exports = startProxy;

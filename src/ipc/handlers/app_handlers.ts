@@ -57,7 +57,6 @@ async function executeApp({
 }): Promise<void> {
   if (proxyWorker) {
     proxyWorkerTerminate = null;
-    console.log("proxyWorker.terminate", proxyWorker.terminate);
     proxyWorkerTerminate = proxyWorker.terminate();
     proxyWorker = null;
   }

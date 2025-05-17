@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Generates a cute app name like "blue-fox" or "jumping-zebra"
+ * Generates a cute app name.
  */
 export function generateCuteAppName(): string {
   const adjectives = [
