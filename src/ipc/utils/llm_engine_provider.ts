@@ -41,6 +41,11 @@ Custom fetch implementation. You can use it as a middleware to intercept request
 or to provide a custom fetch implementation for e.g. testing.
 */
   fetch?: FetchFunction;
+
+  dyadOptions: {
+    enableLazyEdits?: boolean;
+    enableSmartFilesContext?: boolean;
+  };
 }
 
 export interface DyadEngineProvider {
@@ -124,7 +129,9 @@ export function createDyadEngine(
               if (files?.length) {
                 parsedBody.dyad_options = {
                   files,
-                  enable_lazy_edits: true,
+                  enable_lazy_edits: options.dyadOptions.enableLazyEdits,
+                  enable_smart_files_context:
+                    options.dyadOptions.enableSmartFilesContext,
                 };
               }
 
