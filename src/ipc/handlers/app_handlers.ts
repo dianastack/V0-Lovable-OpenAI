@@ -40,7 +40,6 @@ const logger = log.scope("app_handlers");
 const handle = createLoggedHandler(logger);
 
 let proxyWorker: Worker | null = null;
-let proxyWorkerTerminate: Promise<number> | null = null;
 
 // Needed, otherwise electron in MacOS/Linux will not be able
 // to find node/pnpm.
@@ -56,8 +55,7 @@ async function executeApp({
   event: Electron.IpcMainInvokeEvent;
 }): Promise<void> {
   if (proxyWorker) {
-    proxyWorkerTerminate = null;
-    proxyWorkerTerminate = proxyWorker.terminate();
+    proxyWorker.terminate();
     proxyWorker = null;
   }
   await executeAppLocalNode({ appPath, appId, event });
@@ -112,9 +110,6 @@ async function executeAppLocalNode({
     });
     const urlMatch = message.match(/(https?:\/\/localhost:\d+\/?)/);
     if (urlMatch) {
-      if (proxyWorkerTerminate) {
-        await proxyWorkerTerminate;
-      }
       proxyWorker = await startProxy(urlMatch[1], {
         onStarted: (proxyUrl) => {
           event.sender.send("app:output", {
