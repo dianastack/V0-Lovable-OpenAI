@@ -30,8 +30,7 @@ const {
 
 const http = require("http");
 const https = require("https");
-const net = require("net");
-const tls = require("tls");
+
 const { URL } = require("url");
 const fs = require("fs");
 const path = require("path");
@@ -69,7 +68,7 @@ let rememberedOrigin = null; // e.g. "http://localhost:5173"
       parentPort?.postMessage(
         `[proxy-worker] fixed upstream: ${rememberedOrigin}`,
       );
-    } catch (err) {
+    } catch {
       throw new Error(
         `Invalid TARGET_URL "${fixed}". Must be absolute http/https URL.`,
       );
@@ -247,7 +246,7 @@ const server = http.createServer((clientReq, clientRes) => {
 /* 2. WebSocket / generic Upgrade tunnelling                               */
 /* ----------------------------------------------------------------------- */
 
-server.on("upgrade", (req, socket, head) => {
+server.on("upgrade", (req, socket, _head) => {
   let target;
   try {
     target = buildTargetURL(req);
