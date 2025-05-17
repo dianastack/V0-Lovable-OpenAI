@@ -96,6 +96,12 @@ function needsInjection(pathname) {
 
 function injectHTML(buf) {
   let txt = buf.toString("utf8");
+  // These are strings that were used since the first version of the dyad shim.
+  // If the dyad shim is used from legacy apps which came pre-baked with the shim
+  // as a vite plugin, then do not inject the shim twice to avoid weird behaviors.
+  if (txt.includes("window-error") && txt.includes("unhandled-rejection")) {
+    return buf;
+  }
 
   const scripts = [];
 
