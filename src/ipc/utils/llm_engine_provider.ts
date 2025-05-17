@@ -67,7 +67,7 @@ Creates a chat model for text generation.
 }
 
 export function createDyadEngine(
-  options: ExampleProviderSettings = {},
+  options: ExampleProviderSettings,
 ): DyadEngineProvider {
   const baseURL = withoutTrailingSlash(
     options.baseURL ?? "https://api.example.com/v1",
