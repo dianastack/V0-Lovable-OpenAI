@@ -27,10 +27,10 @@ export function findAvailablePort(
         if (err.code === "EADDRINUSE") {
           // Port is in use, try another one
           console.log(`Port ${port} is in use, trying another...`);
-          tryPort();
+          server.close(() => tryPort());
         } else {
           // Other error
-          reject(err);
+          server.close(() => reject(err));
         }
       });
 

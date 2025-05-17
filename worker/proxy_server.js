@@ -1,24 +1,5 @@
 /**
  * proxy.js – zero-dependency worker-based HTTP/WS forwarder
- *
- *  • Shell usage
- *        TARGET_URL=http://localhost:5173 \
- *        LISTEN_HOST=0.0.0.0             \
- *        LISTEN_PORT=31111               \
- *        node proxy.js
- *
- *  • Programmatic usage
- *        const startProxy = require("./startProxy");
- *        startProxy("http://localhost:5173");   // returns Worker instance
- *
- *  Routing rules
- *    1) If an incoming request query string contains   ?url=ABSOLUTE_URL
- *         – forward to ABSOLUTE_URL
- *         – remember ABSOLUTE_URL.origin        (back-compat behaviour)
- *    2) Otherwise
- *         – if an origin is already remembered  (env var / workerData / rule #1)
- *             → forward to  origin + req.path
- *         – else 400
  */
 
 const {
