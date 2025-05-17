@@ -120,7 +120,7 @@ async function executeAppLocalNode({
         onStarted: (proxyUrl) => {
           event.sender.send("app:output", {
             type: "stdout",
-            message: `[dyad-proxy-server]started=${proxyUrl}`,
+            message: `[dyad-proxy-server]started=[${proxyUrl}] original=[${urlMatch[1]}]`,
             appId,
           });
         },
