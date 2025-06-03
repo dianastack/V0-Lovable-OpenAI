@@ -82,6 +82,11 @@ jobs:
         with:
           name: build-artifacts-${{ matrix.os.name }}
           path: out/
+      - name: Fix executable permissions on macOS
+        if: contains(matrix.os.name, 'macos')
+        run: |
+          find out/ -name "dyad" -type f -exec chmod +x {} \;
+          find out/ -name "*.app" -type d -exec chmod +x {}/Contents/MacOS/* \;
       - name: Install Chromium browser for Playwright
         run: npx playwright install chromium --with-deps
       - name: Prep test server
