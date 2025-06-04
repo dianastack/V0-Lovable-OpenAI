@@ -489,6 +489,9 @@ export const test = base.extend<{
           appInfo.main,
           "--enable-logging",
           `--user-data-dir=${USER_DATA_DIR}`,
+          "--disable-gpu",
+          "--disable-software-rasterizer",
+          "--disable-gpu-sandbox",
         ],
         executablePath: appInfo.executable,
         // Strong suspicion this is causing issues on Windows with tests hanging due to error:
