@@ -556,7 +556,7 @@ export const test = base.extend<{
 });
 
 // Wrapper that skips tests on Windows platform
-export const testSkipIfWindows = os.platform() === "win32" ? test.skip : test;
+export const testSkipIfWindows = os.platform() === "win32" ? test : test;
 
 function prettifyDump(
   allMessages: {
