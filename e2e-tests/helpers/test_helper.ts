@@ -25,10 +25,16 @@ class PageObject {
     this.userDataDir = userDataDir;
   }
 
-  async setUp({ autoApprove = false }: { autoApprove?: boolean } = {}) {
+  async setUp({
+    autoApprove = false,
+    nativeGit = false,
+  }: { autoApprove?: boolean; nativeGit?: boolean } = {}) {
     await this.goToSettingsTab();
     if (autoApprove) {
       await this.toggleAutoApprove();
+    }
+    if (nativeGit) {
+      await this.toggleNativeGit();
     }
     await this.setUpTestProvider();
     await this.setUpTestModel();
@@ -133,9 +139,10 @@ class PageObject {
     return this.page.getByTestId("preview-iframe-element");
   }
 
-  async snapshotPreview() {
+  async snapshotPreview({ name }: { name?: string } = {}) {
     const iframe = this.getPreviewIframeElement();
     await expect(iframe.contentFrame().locator("body")).toMatchAriaSnapshot({
+      name,
       timeout: Timeout.LONG,
     });
   }
@@ -333,6 +340,10 @@ class PageObject {
 
   async toggleAutoApprove() {
     await this.page.getByRole("switch", { name: "Auto-approve" }).click();
+  }
+
+  async toggleNativeGit() {
+    await this.page.getByRole("switch", { name: "Enable Native Git" }).click();
   }
 
   async snapshotSettings() {
