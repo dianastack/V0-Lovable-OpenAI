@@ -1,4 +1,4 @@
-import { PageObject, testSkipIfWindows } from "./helpers/test_helper";
+import { PageObject, test } from "./helpers/test_helper";
 
 import * as eph from "electron-playwright-helpers";
 import path from "node:path";
@@ -42,10 +42,10 @@ const runVersionIntegrityTest = async (po: PageObject, nativeGit: boolean) => {
   await po.snapshotAppFiles({ name: "v1" });
 };
 
-testSkipIfWindows("version integrity (git isomorphic)", async ({ po }) => {
+test("version integrity (git isomorphic)", async ({ po }) => {
   await runVersionIntegrityTest(po, false);
 });
 
-testSkipIfWindows("version integrity (git native)", async ({ po }) => {
+test("version integrity (git native)", async ({ po }) => {
   await runVersionIntegrityTest(po, true);
 });
