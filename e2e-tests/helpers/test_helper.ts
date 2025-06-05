@@ -334,6 +334,14 @@ export class PageObject {
     return this.page.getByTestId(`app-list-item-${appName}`);
   }
 
+  async isCurrentAppNameNone() {
+    await expect(async () => {
+      await expect(this.getTitleBarAppNameButton()).toContainText(
+        "no app selected",
+      );
+    }).toPass();
+  }
+
   async getCurrentAppName() {
     // Make sure to wait for the app to be set to avoid a race condition.
     await expect(async () => {
