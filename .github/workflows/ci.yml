@@ -39,6 +39,20 @@ jobs:
           node-version-file: package.json
           cache: npm
           cache-dependency-path: package-lock.json
+      - name: Install node modules
+        run: npm install
+      - name: Presubmit check (e.g. lint, format)
+        # do not run this on Windows (it fails and not necessary)
+        if: contains(matrix.os.name, 'macos')
+        run: npm run presubmit
+      - name: Type-checking
+        # do not run this on windows (it's redunant)
+        if: contains(matrix.os.name, 'macos')
+        run: npm run ts
+      - name: Unit tests
+        # do not run this on windows (it's redunant)
+        if: contains(matrix.os.name, 'macos')
+        run: npm run test
       - name: Setup pnpm
         uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
         with:
@@ -62,20 +76,6 @@ jobs:
         run: cd scaffold && pnpm install
       - name: Install nextjs-template dependencies
         run: cd nextjs-template && pnpm install
-      - name: Install node modules
-        run: npm install
-      - name: Presubmit check (e.g. lint, format)
-        # do not run this on Windows (it fails and not necessary)
-        if: contains(matrix.os.name, 'macos')
-        run: npm run presubmit
-      - name: Type-checking
-        # do not run this on windows (it's redunant)
-        if: contains(matrix.os.name, 'macos')
-        run: npm run ts
-      - name: Unit tests
-        # do not run this on windows (it's redunant)
-        if: contains(matrix.os.name, 'macos')
-        run: npm run test
       - name: Install Chromium browser for Playwright
         run: npx playwright install chromium --with-deps
       - name: Build
