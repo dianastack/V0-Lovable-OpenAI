@@ -48,6 +48,10 @@ const activeStreams = new Map<number, AbortController>();
 // Track partial responses for cancelled streams
 const partialResponses = new Map<number, string>();
 
+// Track continuation depth to prevent infinite loops
+const continuationDepth = new Map<number, number>();
+const MAX_CONTINUATION_DEPTH = 3;
+
 // Directory for storing temporary files
 const TEMP_DIR = path.join(os.tmpdir(), "dyad-attachments");
 
@@ -262,161 +266,8 @@ ${componentSnippet}
       } else {
         // Normal AI processing for non-test prompts
         const settings = readSettings();
-
-        // Extract codebase information if app is associated with the chat
-        let codebaseInfo = "";
-        let files: { path: string; content: string }[] = [];
-        if (updatedChat.app) {
-          const appPath = getDyadAppPath(updatedChat.app.path);
-          try {
-            const out = await extractCodebase({
-              appPath,
-              chatContext: req.selectedComponent
-                ? {
-                    contextPaths: [
-                      {
-                        globPath: req.selectedComponent.relativePath,
-                      },
-                    ],
-                    smartContextAutoIncludes: [],
-                  }
-                : validateChatContext(updatedChat.app.chatContext),
-            });
-            codebaseInfo = out.formattedOutput;
-            files = out.files;
-            logger.log(`Extracted codebase information from ${appPath}`);
-          } catch (error) {
-            logger.error("Error extracting codebase:", error);
-          }
-        }
-        logger.log(
-          "codebaseInfo: length",
-          codebaseInfo.length,
-          "estimated tokens",
-          codebaseInfo.length / 4,
-        );
-        const { modelClient, isEngineEnabled } = await getModelClient(
-          settings.selectedModel,
-          settings,
-          files,
-        );
-
-        // Prepare message history for the AI
-        const messageHistory = updatedChat.messages.map((message) => ({
-          role: message.role as "user" | "assistant" | "system",
-          content: message.content,
-        }));
-
-        // Limit chat history based on maxChatTurnsInContext setting
-        // We add 1 because the current prompt counts as a turn.
-        const maxChatTurns =
-          (settings.maxChatTurnsInContext || MAX_CHAT_TURNS_IN_CONTEXT) + 1;
-
-        // If we need to limit the context, we take only the most recent turns
-        let limitedMessageHistory = messageHistory;
-        if (messageHistory.length > maxChatTurns * 2) {
-          // Each turn is a user + assistant pair
-          // Calculate how many messages to keep (maxChatTurns * 2)
-          let recentMessages = messageHistory
-            .filter((msg) => msg.role !== "system")
-            .slice(-maxChatTurns * 2);
-
-          // Ensure the first message is a user message
-          if (recentMessages.length > 0 && recentMessages[0].role !== "user") {
-            // Find the first user message
-            const firstUserIndex = recentMessages.findIndex(
-              (msg) => msg.role === "user",
-            );
-            if (firstUserIndex > 0) {
-              // Drop assistant messages before the first user message
-              recentMessages = recentMessages.slice(firstUserIndex);
-            } else if (firstUserIndex === -1) {
-              logger.warn(
-                "No user messages found in recent history, set recent messages to empty",
-              );
-              recentMessages = [];
-            }
-          }
-
-          limitedMessageHistory = [...recentMessages];
-
-          logger.log(
-            `Limiting chat history from ${messageHistory.length} to ${limitedMessageHistory.length} messages (max ${maxChatTurns} turns)`,
-          );
-        }
-
-        let systemPrompt = constructSystemPrompt({
-          aiRules: await readAiRules(getDyadAppPath(updatedChat.app.path)),
-          chatMode: settings.selectedChatMode,
-        });
-        if (
-          updatedChat.app?.supabaseProjectId &&
-          settings.supabase?.accessToken?.value
-        ) {
-          systemPrompt +=
-            "\n\n" +
-            SUPABASE_AVAILABLE_SYSTEM_PROMPT +
-            "\n\n" +
-            (await getSupabaseContext({
-              supabaseProjectId: updatedChat.app.supabaseProjectId,
-            }));
-        } else {
-          systemPrompt += "\n\n" + SUPABASE_NOT_AVAILABLE_SYSTEM_PROMPT;
-        }
-        const isSummarizeIntent = req.prompt.startsWith(
-          "Summarize from chat-id=",
-        );
-        if (isSummarizeIntent) {
-          systemPrompt = SUMMARIZE_CHAT_SYSTEM_PROMPT;
-        }
-
-        // Update the system prompt for images if there are image attachments
-        const hasImageAttachments =
-          req.attachments &&
-          req.attachments.some((attachment) =>
-            attachment.type.startsWith("image/"),
-          );
-
-        if (hasImageAttachments) {
-          systemPrompt += `
-
-# Image Analysis Capabilities
-This conversation includes one or more image attachments. When the user uploads images:
-1. If the user explicitly asks for analysis, description, or information about the image, please analyze the image content.
-2. Describe what you see in the image if asked.
-3. You can use images as references when the user has coding or design-related questions.
-4. For diagrams or wireframes, try to understand the content and structure shown.
-5. For screenshots of code or errors, try to identify the issue or explain the code.
-`;
-        }
-
-        const codebasePrefix = isEngineEnabled
-          ? // No codebase prefix if engine is set, we will take of it there.
-            []
-          : ([
-              {
-                role: "user",
-                content: "This is my codebase. " + codebaseInfo,
-              },
-              {
-                role: "assistant",
-                content: "OK, got it. I'm ready to help",
-              },
-            ] as const);
-
-        let chatMessages: CoreMessage[] = [
-          ...codebasePrefix,
-          ...limitedMessageHistory.map((msg) => ({
-            role: msg.role as "user" | "assistant" | "system",
-            // Why remove thinking tags?
-            // Thinking tags are generally not critical for the context
-            // and eats up extra tokens.
-            content:
-              settings.selectedChatMode === "ask"
-                ? removeDyadTags(removeThinkingTags(msg.content))
-                : removeThinkingTags(msg.content),
-          })),
-        ];
+        const { modelClient, systemPrompt, chatMessages } =
+          await setupStreamingContext(updatedChat, req, false);
 
         // Check if the last message should include attachments
         if (chatMessages.length >= 2 && attachmentPaths.length > 0) {
@@ -430,25 +281,6 @@ This conversation includes one or more image attachments. When the user uploads 
               attachmentPaths,
             );
           }
-        }
-
-        if (isSummarizeIntent) {
-          const previousChat = await db.query.chats.findFirst({
-            where: eq(chats.id, parseInt(req.prompt.split("=")[1])),
-            with: {
-              messages: {
-                orderBy: (messages, { asc }) => [asc(messages.createdAt)],
-              },
-            },
-          });
-          chatMessages = [
-            {
-              role: "user",
-              content:
-                "Summarize the following chat: " +
-                formatMessages(previousChat?.messages ?? []),
-            } satisfies CoreMessage,
-          ];
         }
 
         // When calling streamText, the messages need to be properly formatted for mixed content
@@ -491,66 +323,16 @@ This conversation includes one or more image attachments. When the user uploads 
         let inThinkingBlock = false;
         try {
           for await (const part of fullStream) {
-            let chunk = "";
-            if (part.type === "text-delta") {
-              if (inThinkingBlock) {
-                chunk = "</think>";
-                inThinkingBlock = false;
-              }
-              chunk += part.textDelta;
-            } else if (part.type === "reasoning") {
-              if (!inThinkingBlock) {
-                chunk = "<think>";
-                inThinkingBlock = true;
-              }
-              // Escape dyad tags in reasoning content
-              // We are replacing the opening tag with a look-alike character
-              // to avoid issues where thinking content includes dyad tags
-              // and are mishandled by:
-              // 1. FE markdown parser
-              // 2. Main process response processor
-              chunk += part.textDelta
-                .replace(/<dyad/g, "＜dyad")
-                .replace(/<\/dyad/g, "＜/dyad");
-            }
-
-            if (!chunk) {
-              continue;
-            }
-
-            fullResponse += chunk;
-            fullResponse = cleanFullResponse(fullResponse);
-
-            if (
-              fullResponse.includes("$$SUPABASE_CLIENT_CODE$$") &&
-              updatedChat.app?.supabaseProjectId
-            ) {
-              const supabaseClientCode = await getSupabaseClientCode({
-                projectId: updatedChat.app?.supabaseProjectId,
-              });
-              fullResponse = fullResponse.replace(
-                "$$SUPABASE_CLIENT_CODE$$",
-                supabaseClientCode,
-              );
-            }
-            // Store the current partial response
-            partialResponses.set(req.chatId, fullResponse);
-
-            // Update the placeholder assistant message content in the messages array
-            const currentMessages = [...updatedChat.messages];
-            if (
-              currentMessages.length > 0 &&
-              currentMessages[currentMessages.length - 1].role === "assistant"
-            ) {
-              currentMessages[currentMessages.length - 1].content =
-                fullResponse;
-            }
-
-            // Update the assistant message in the database
-            safeSend(event.sender, "chat:response:chunk", {
-              chatId: req.chatId,
-              messages: currentMessages,
-            });
+            const result = await processStreamChunk(
+              part,
+              fullResponse,
+              inThinkingBlock,
+              req.chatId,
+              updatedChat,
+              event,
+            );
+            fullResponse = result.fullResponse;
+            inThinkingBlock = result.inThinkingBlock;
 
             // If the stream was aborted, exit early
             if (abortController.signal.aborted) {
@@ -606,6 +388,34 @@ This conversation includes one or more image attachments. When the user uploads 
             .where(and(eq(chats.id, req.chatId), isNull(chats.title)));
         }
         const chatSummary = chatTitle?.[1];
+
+        // Check for unclosed dyad tags and continue if needed
+        if (hasUnclosedDyadTags(fullResponse)) {
+          logger.log(
+            `Detected unclosed dyad tags in chat ${req.chatId}, continuing stream...`,
+          );
+
+          try {
+            fullResponse = await continueStream(
+              event,
+              req,
+              fullResponse,
+              placeholderAssistantMessage.id,
+            );
+            logger.log(
+              `Continued stream completed for chat ${req.chatId}, final response length: ${fullResponse.length}`,
+            );
+          } catch (continuationError) {
+            logger.error(
+              `Error during stream continuation for chat ${req.chatId}:`,
+              continuationError,
+            );
+            // Continue with the original response if continuation fails
+          } finally {
+            // Clean up continuation depth tracking
+            continuationDepth.delete(req.chatId);
+          }
+        }
 
         // Update the placeholder assistant message with the full response
         await db
@@ -831,4 +641,420 @@ function removeThinkingTags(text: string): string {
 export function removeDyadTags(text: string): string {
   const dyadRegex = /<dyad-[^>]*>[\s\S]*?<\/dyad-[^>]*>/g;
   return text.replace(dyadRegex, "").trim();
+}
+
+// Helper function to detect unclosed dyad tags
+function hasUnclosedDyadTags(content: string): boolean {
+  // Common dyad tags that should be closed
+  const dyadTags = [
+    "dyad-write",
+    "dyad-read",
+    "dyad-execute",
+    "dyad-delete",
+    "dyad-move",
+  ];
+
+  for (const tag of dyadTags) {
+    const openTags = (content.match(new RegExp(`<${tag}[^>]*>`, "g")) || [])
+      .length;
+    const closeTags = (content.match(new RegExp(`</${tag}>`, "g")) || [])
+      .length;
+
+    if (openTags > closeTags) {
+      logger.log(`Found ${openTags - closeTags} unclosed <${tag}> tag(s)`);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Helper function to setup streaming context (codebase, model, prompts, etc.)
+async function setupStreamingContext(
+  chat: any,
+  req: ChatStreamParams,
+  isContinuation: boolean = false,
+): Promise<{
+  modelClient: any;
+  isEngineEnabled: boolean;
+  systemPrompt: string;
+  chatMessages: CoreMessage[];
+  files: { path: string; content: string }[];
+}> {
+  const settings = readSettings();
+
+  // Extract codebase information if app is associated with the chat
+  let codebaseInfo = "";
+  let files: { path: string; content: string }[] = [];
+  if (chat.app) {
+    const appPath = getDyadAppPath(chat.app.path);
+    try {
+      const out = await extractCodebase({
+        appPath,
+        chatContext: req.selectedComponent
+          ? {
+              contextPaths: [
+                {
+                  globPath: req.selectedComponent.relativePath,
+                },
+              ],
+              smartContextAutoIncludes: [],
+            }
+          : validateChatContext(chat.app.chatContext),
+      });
+      codebaseInfo = out.formattedOutput;
+      files = out.files;
+      logger.log(`Extracted codebase information from ${appPath}`);
+    } catch (error) {
+      logger.error("Error extracting codebase:", error);
+    }
+  }
+
+  logger.log(
+    "codebaseInfo: length",
+    codebaseInfo.length,
+    "estimated tokens",
+    codebaseInfo.length / 4,
+  );
+
+  const { modelClient, isEngineEnabled } = await getModelClient(
+    settings.selectedModel,
+    settings,
+    files,
+  );
+
+  // Prepare message history for the AI
+  const messageHistory = chat.messages.map((message: any) => ({
+    role: message.role as "user" | "assistant" | "system",
+    content: message.content,
+  }));
+
+  // Limit chat history based on maxChatTurnsInContext setting
+  const maxChatTurns =
+    (settings.maxChatTurnsInContext || MAX_CHAT_TURNS_IN_CONTEXT) + 1;
+  let limitedMessageHistory = messageHistory;
+  if (messageHistory.length > maxChatTurns * 2) {
+    let recentMessages = messageHistory
+      .filter((msg: any) => msg.role !== "system")
+      .slice(-maxChatTurns * 2);
+
+    if (recentMessages.length > 0 && recentMessages[0].role !== "user") {
+      const firstUserIndex = recentMessages.findIndex(
+        (msg: any) => msg.role === "user",
+      );
+      if (firstUserIndex > 0) {
+        recentMessages = recentMessages.slice(firstUserIndex);
+      } else if (firstUserIndex === -1) {
+        logger.warn(
+          "No user messages found in recent history, set recent messages to empty",
+        );
+        recentMessages = [];
+      }
+    }
+
+    limitedMessageHistory = [...recentMessages];
+    logger.log(
+      `Limiting chat history from ${messageHistory.length} to ${limitedMessageHistory.length} messages (max ${maxChatTurns} turns)`,
+    );
+  }
+
+  let systemPrompt = constructSystemPrompt({
+    aiRules: await readAiRules(getDyadAppPath(chat.app.path)),
+    chatMode: settings.selectedChatMode,
+  });
+
+  if (chat.app?.supabaseProjectId && settings.supabase?.accessToken?.value) {
+    systemPrompt +=
+      "\n\n" +
+      SUPABASE_AVAILABLE_SYSTEM_PROMPT +
+      "\n\n" +
+      (await getSupabaseContext({
+        supabaseProjectId: chat.app.supabaseProjectId,
+      }));
+  } else {
+    systemPrompt += "\n\n" + SUPABASE_NOT_AVAILABLE_SYSTEM_PROMPT;
+  }
+
+  const isSummarizeIntent = req.prompt.startsWith("Summarize from chat-id=");
+  if (isSummarizeIntent) {
+    systemPrompt = SUMMARIZE_CHAT_SYSTEM_PROMPT;
+  }
+
+  // Update the system prompt for images if there are image attachments
+  const hasImageAttachments =
+    req.attachments &&
+    req.attachments.some((attachment) => attachment.type.startsWith("image/"));
+
+  if (hasImageAttachments) {
+    systemPrompt += `
+
+# Image Analysis Capabilities
+This conversation includes one or more image attachments. When the user uploads images:
+1. If the user explicitly asks for analysis, description, or information about the image, please analyze the image content.
+2. Describe what you see in the image if asked.
+3. You can use images as references when the user has coding or design-related questions.
+4. For diagrams or wireframes, try to understand the content and structure shown.
+5. For screenshots of code or errors, try to identify the issue or explain the code.
+`;
+  }
+
+  const codebasePrefix = isEngineEnabled
+    ? []
+    : ([
+        {
+          role: "user",
+          content: "This is my codebase. " + codebaseInfo,
+        },
+        {
+          role: "assistant",
+          content: "OK, got it. I'm ready to help",
+        },
+      ] as const);
+
+  let chatMessages: CoreMessage[] = [
+    ...codebasePrefix,
+    ...limitedMessageHistory
+      .slice(0, isContinuation ? -1 : undefined)
+      .map((msg: any) => ({
+        role: msg.role as "user" | "assistant" | "system",
+        content:
+          settings.selectedChatMode === "ask"
+            ? removeDyadTags(removeThinkingTags(msg.content))
+            : removeThinkingTags(msg.content),
+      })),
+  ];
+
+  if (isSummarizeIntent) {
+    const previousChat = await db.query.chats.findFirst({
+      where: eq(chats.id, parseInt(req.prompt.split("=")[1])),
+      with: {
+        messages: {
+          orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+        },
+      },
+    });
+    chatMessages = [
+      {
+        role: "user",
+        content:
+          "Summarize the following chat: " +
+          formatMessages(previousChat?.messages ?? []),
+      } satisfies CoreMessage,
+    ];
+  }
+
+  return {
+    modelClient,
+    isEngineEnabled: isEngineEnabled ?? false,
+    systemPrompt,
+    chatMessages,
+    files,
+  };
+}
+
+// Helper function to process stream chunks
+async function processStreamChunk(
+  part: any,
+  fullResponse: string,
+  inThinkingBlock: boolean,
+  chatId: number,
+  chat: any,
+  event: Electron.IpcMainInvokeEvent,
+): Promise<{ fullResponse: string; inThinkingBlock: boolean }> {
+  let chunk = "";
+  if (part.type === "text-delta") {
+    if (inThinkingBlock) {
+      chunk = "</think>";
+      inThinkingBlock = false;
+    }
+    chunk += part.textDelta;
+  } else if (part.type === "reasoning") {
+    if (!inThinkingBlock) {
+      chunk = "<think>";
+      inThinkingBlock = true;
+    }
+    chunk += part.textDelta
+      .replace(/<dyad/g, "＜dyad")
+      .replace(/<\/dyad/g, "＜/dyad");
+  }
+
+  if (!chunk) {
+    return { fullResponse, inThinkingBlock };
+  }
+
+  fullResponse += chunk;
+  fullResponse = cleanFullResponse(fullResponse);
+
+  if (
+    fullResponse.includes("$$SUPABASE_CLIENT_CODE$$") &&
+    chat.app?.supabaseProjectId
+  ) {
+    const supabaseClientCode = await getSupabaseClientCode({
+      projectId: chat.app?.supabaseProjectId,
+    });
+    fullResponse = fullResponse.replace(
+      "$$SUPABASE_CLIENT_CODE$$",
+      supabaseClientCode,
+    );
+  }
+
+  // Store the current partial response
+  partialResponses.set(chatId, fullResponse);
+
+  // Update the messages for the frontend
+  const currentMessages = [...chat.messages];
+  if (
+    currentMessages.length > 0 &&
+    currentMessages[currentMessages.length - 1].role === "assistant"
+  ) {
+    currentMessages[currentMessages.length - 1].content = fullResponse;
+  }
+
+  // Update the assistant message in the database
+  safeSend(event.sender, "chat:response:chunk", {
+    chatId: chatId,
+    messages: currentMessages,
+  });
+
+  return { fullResponse, inThinkingBlock };
+}
+
+// Helper function to continue a stream with existing response
+async function continueStream(
+  event: Electron.IpcMainInvokeEvent,
+  req: ChatStreamParams,
+  existingResponse: string,
+  placeholderMessageId: number,
+): Promise<string> {
+  logger.log(
+    `Continuing stream for chat ${req.chatId} with existing response length: ${existingResponse.length}`,
+  );
+
+  // Increment continuation depth
+  const currentDepth = continuationDepth.get(req.chatId) || 0;
+  if (currentDepth >= MAX_CONTINUATION_DEPTH) {
+    logger.warn(`Maximum continuation depth reached for chat ${req.chatId}`);
+    return existingResponse;
+  }
+  continuationDepth.set(req.chatId, currentDepth + 1);
+
+  try {
+    // Create a new AbortController for the continuation
+    const abortController = new AbortController();
+    activeStreams.set(req.chatId, abortController);
+
+    const settings = readSettings();
+
+    // Get the updated chat with all context
+    const chat = await db.query.chats.findFirst({
+      where: eq(chats.id, req.chatId),
+      with: {
+        messages: {
+          orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+        },
+        app: true,
+      },
+    });
+
+    if (!chat) {
+      throw new Error(`Chat not found: ${req.chatId}`);
+    }
+
+    // Setup streaming context for continuation
+    const { modelClient, systemPrompt, chatMessages } =
+      await setupStreamingContext(chat, req, true);
+
+    // Add a message that instructs the AI to continue from the existing response
+    chatMessages.push({
+      role: "user",
+      content: `Please continue from where you left off. Here's your previous incomplete response:
+
+${existingResponse}
+
+Complete the unfinished dyad tags and continue the response.`,
+    });
+
+    let fullResponse = existingResponse;
+
+    const { fullStream } = streamText({
+      maxTokens: await getMaxTokens(settings.selectedModel),
+      temperature: 0,
+      maxRetries: 2,
+      model: modelClient.model,
+      providerOptions: {
+        "dyad-gateway": getExtraProviderOptions(modelClient.builtinProviderId),
+        google: {
+          thinkingConfig: {
+            includeThoughts: true,
+          },
+        } satisfies GoogleGenerativeAIProviderOptions,
+      },
+      system: systemPrompt,
+      messages: chatMessages.filter((m) => m.content),
+      onError: (error: any) => {
+        logger.error("Error streaming continuation text:", error);
+        let errorMessage = (error as any)?.error?.message;
+        const responseBody = error?.error?.responseBody;
+        if (errorMessage && responseBody) {
+          errorMessage += "\n\nDetails: " + responseBody;
+        }
+        const message = errorMessage || JSON.stringify(error);
+        event.sender.send(
+          "chat:response:error",
+          `Sorry, there was an error continuing the AI response: ${message}`,
+        );
+        activeStreams.delete(req.chatId);
+      },
+      abortSignal: abortController.signal,
+    });
+
+    // Process the continuation stream
+    let inThinkingBlock = false;
+    try {
+      for await (const part of fullStream) {
+        const result = await processStreamChunk(
+          part,
+          fullResponse,
+          inThinkingBlock,
+          req.chatId,
+          chat,
+          event,
+        );
+        fullResponse = result.fullResponse;
+        inThinkingBlock = result.inThinkingBlock;
+
+        // If the stream was aborted, exit early
+        if (abortController.signal.aborted) {
+          logger.log(`Continuation stream for chat ${req.chatId} was aborted`);
+          break;
+        }
+      }
+    } catch (streamError) {
+      if (abortController.signal.aborted) {
+        const partialResponse = partialResponses.get(req.chatId);
+        if (partialResponse) {
+          try {
+            await db
+              .update(messages)
+              .set({
+                content: `${partialResponse}\n\n[Response cancelled by user]`,
+              })
+              .where(eq(messages.id, placeholderMessageId));
+            partialResponses.delete(req.chatId);
+          } catch (error) {
+            logger.error(
+              `Error saving partial continuation response: ${error}`,
+            );
+          }
+        }
+        return fullResponse;
+      }
+      throw streamError;
+    }
+
+    return fullResponse;
+  } finally {
+    // Clean up continuation tracking
+    activeStreams.delete(req.chatId);
+  }
 }
