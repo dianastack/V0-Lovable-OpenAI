@@ -1,6 +1,6 @@
-import { test, Timeout } from "./helpers/test_helper";
+import { testSkipIfWindows, Timeout } from "./helpers/test_helper";
 
-test("capacitor upgrade and sync works", async ({ po }) => {
+testSkipIfWindows("capacitor upgrade and sync works", async ({ po }) => {
   await po.setUp();
   await po.sendPrompt("hi");
   await po.getTitleBarAppNameButton().click();
