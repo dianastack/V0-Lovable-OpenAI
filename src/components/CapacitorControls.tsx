@@ -126,7 +126,7 @@ export function CapacitorControls({ appId }: CapacitorControlsProps) {
 
   return (
     <>
-      <Card className="mt-1">
+      <Card className="mt-1" data-testid="capacitor-controls">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             Mobile Development
