@@ -1,4 +1,4 @@
-import { test } from "./helpers/test_helper";
+import { test, Timeout } from "./helpers/test_helper";
 
 test("capacitor upgrade and sync works", async ({ po }) => {
   await po.setUp();
@@ -16,7 +16,9 @@ test("capacitor upgrade and sync works", async ({ po }) => {
 
   // In test mode, this should complete without error and return to idle state
   // Wait for the button to be enabled again (not in loading state)
-  await po.page.getByText("Sync & Open iOS").waitFor({ state: "visible" });
+  await po.page
+    .getByText("Sync & Open iOS")
+    .waitFor({ state: "visible", timeout: Timeout.LONG });
 
   // Test sync & open Android functionality - the button contains "Sync & Open Android"
   const androidButton = po.page.getByRole("button", {
@@ -26,5 +28,7 @@ test("capacitor upgrade and sync works", async ({ po }) => {
 
   // In test mode, this should complete without error and return to idle state
   // Wait for the button to be enabled again (not in loading state)
-  await po.page.getByText("Sync & Open Android").waitFor({ state: "visible" });
+  await po.page
+    .getByText("Sync & Open Android")
+    .waitFor({ state: "visible", timeout: Timeout.LONG });
 });

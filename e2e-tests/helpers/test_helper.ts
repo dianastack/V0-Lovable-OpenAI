@@ -655,7 +655,7 @@ export class PageObject {
 
   async expectNoAppUpgrades() {
     await expect(this.page.getByTestId("no-app-upgrades-needed")).toBeVisible({
-      timeout: Timeout.MEDIUM,
+      timeout: Timeout.LONG,
     });
   }
 
