@@ -21,6 +21,13 @@ const availableUpgrades: Omit<AppUpgrade, "isNeeded">[] = [
       "Installs the Dyad component tagger Vite plugin and its dependencies.",
     manualUpgradeUrl: "https://dyad.sh/docs/upgrades/select-component",
   },
+  {
+    id: "capacitor",
+    title: "Upgrade to hybrid mobile app with Capacitor",
+    description:
+      "Adds Capacitor to your app lets it run on iOS and Android in addition to the web.",
+    manualUpgradeUrl: "https://dyad.sh/docs/guides/mobile-app#upgrade-your-app",
+  },
 ];
 
 async function getApp(appId: number) {
