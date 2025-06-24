@@ -44,7 +44,7 @@ export function CapacitorControls({ appId }: CapacitorControlsProps) {
   const { data: isCapacitor, isLoading } = useQuery({
     queryKey: ["is-capacitor", appId],
     queryFn: () => IpcClient.getInstance().isCapacitor({ appId }),
-    enabled: !!appId,
+    enabled: appId !== undefined && appId !== null,
   });
 
   const showErrorDialog = (title: string, error: unknown) => {
