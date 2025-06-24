@@ -13,6 +13,59 @@ import { gitAddAll, gitCommit } from "../utils/git_utils";
 const logger = log.scope("app_upgrade_handlers");
 const handle = createLoggedHandler(logger);
 
+async function simpleSpawn({
+  command,
+  cwd,
+  successMessage,
+  errorPrefix,
+}: {
+  command: string;
+  cwd: string;
+  successMessage: string;
+  errorPrefix: string;
+}): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    logger.info(`Running: ${command}`);
+    const process = spawn(command, {
+      cwd,
+      shell: true,
+      stdio: "pipe",
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    process.stdout?.on("data", (data) => {
+      const output = data.toString();
+      stdout += output;
+      logger.info(output);
+    });
+
+    process.stderr?.on("data", (data) => {
+      const output = data.toString();
+      stderr += output;
+      logger.error(output);
+    });
+
+    process.on("close", (code) => {
+      if (code === 0) {
+        logger.info(successMessage);
+        resolve();
+      } else {
+        logger.error(`${errorPrefix}, exit code ${code}`);
+        const errorMessage = `${errorPrefix} (exit code ${code})\n\nSTDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
+        reject(new Error(errorMessage));
+      }
+    });
+
+    process.on("error", (err) => {
+      logger.error(`Failed to spawn command: ${command}`, err);
+      const errorMessage = `Failed to spawn command: ${err.message}\n\nSTDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
+      reject(new Error(errorMessage));
+    });
+  });
+}
+
 const availableUpgrades: Omit<AppUpgrade, "isNeeded">[] = [
   {
     id: "component-tagger",
@@ -40,6 +93,13 @@ async function getApp(appId: number) {
   return app;
 }
 
+function isViteApp(appPath: string): boolean {
+  const viteConfigPathJs = path.join(appPath, "vite.config.js");
+  const viteConfigPathTs = path.join(appPath, "vite.config.ts");
+
+  return fs.existsSync(viteConfigPathTs) || fs.existsSync(viteConfigPathJs);
+}
+
 function isComponentTaggerUpgradeNeeded(appPath: string): boolean {
   const viteConfigPathJs = path.join(appPath, "vite.config.js");
   const viteConfigPathTs = path.join(appPath, "vite.config.ts");
@@ -60,6 +120,46 @@ function isComponentTaggerUpgradeNeeded(appPath: string): boolean {
     logger.error("Error reading vite config", e);
     return false;
   }
+}
+
+function isCapacitorUpgradeNeeded(appPath: string): boolean {
+  // Check if it's a Vite app first
+  if (!isViteApp(appPath)) {
+    return false;
+  }
+
+  // Check if Capacitor is already installed
+  const capacitorConfigJs = path.join(appPath, "capacitor.config.js");
+  const capacitorConfigTs = path.join(appPath, "capacitor.config.ts");
+  const capacitorConfigJson = path.join(appPath, "capacitor.config.json");
+
+  // If any Capacitor config exists, the upgrade is not needed
+  if (
+    fs.existsSync(capacitorConfigJs) ||
+    fs.existsSync(capacitorConfigTs) ||
+    fs.existsSync(capacitorConfigJson)
+  ) {
+    return false;
+  }
+
+  // Check if Capacitor dependencies are already in package.json
+  const packageJsonPath = path.join(appPath, "package.json");
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+      const dependencies = {
+        ...packageJson.dependencies,
+        ...packageJson.devDependencies,
+      };
+      if (dependencies["@capacitor/core"] || dependencies["@capacitor/cli"]) {
+        return false;
+      }
+    } catch (e) {
+      logger.error("Error reading package.json", e);
+    }
+  }
+
+  return true;
 }
 
 async function applyComponentTagger(appPath: string) {
@@ -164,6 +264,90 @@ async function applyComponentTagger(appPath: string) {
   }
 }
 
+async function applyCapacitor(appPath: string) {
+  // Get app name from package.json
+  const packageJsonPath = path.join(appPath, "package.json");
+  let appName = "App";
+
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+      appName = packageJson.name || "App";
+    } catch (e) {
+      logger.error("Error reading package.json for app name", e);
+    }
+  }
+
+  // Install Capacitor dependencies
+  await simpleSpawn({
+    command:
+      "pnpm add @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android || npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android --legacy-peer-deps",
+    cwd: appPath,
+    successMessage: "Capacitor dependencies installed successfully",
+    errorPrefix: "Failed to install Capacitor dependencies",
+  });
+
+  // Initialize Capacitor
+  await simpleSpawn({
+    command: `npx cap init "${appName}" "com.example.${appName.toLowerCase().replace(/[^a-z0-9]/g, "")}" --web-dir=dist`,
+    cwd: appPath,
+    successMessage: "Capacitor initialized successfully",
+    errorPrefix: "Failed to initialize Capacitor",
+  });
+
+  // Add iOS and Android platforms
+  await simpleSpawn({
+    command: "npx cap add ios && npx cap add android",
+    cwd: appPath,
+    successMessage: "iOS and Android platforms added successfully",
+    errorPrefix: "Failed to add iOS and Android platforms",
+  });
+
+  // Add build scripts to package.json if they don't exist
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+      const scripts = packageJson.scripts || {};
+
+      if (!scripts["cap:ios"]) {
+        scripts["cap:ios"] = "cap open ios";
+      }
+      if (!scripts["cap:android"]) {
+        scripts["cap:android"] = "cap open android";
+      }
+      if (!scripts["cap:sync"]) {
+        scripts["cap:sync"] = "cap sync";
+      }
+
+      packageJson.scripts = scripts;
+
+      await fs.promises.writeFile(
+        packageJsonPath,
+        JSON.stringify(packageJson, null, 2),
+      );
+      logger.info("Added Capacitor scripts to package.json");
+    } catch (e) {
+      logger.error("Error updating package.json with Capacitor scripts", e);
+    }
+  }
+
+  // Commit changes
+  try {
+    logger.info("Staging and committing Capacitor changes");
+    await gitAddAll({ path: appPath });
+    await gitCommit({
+      path: appPath,
+      message: "[dyad] add Capacitor for mobile app support",
+    });
+    logger.info("Successfully committed Capacitor changes");
+  } catch (err) {
+    logger.warn(
+      `Failed to commit changes. This may happen if the project is not in a git repository, or if there are no changes to commit.`,
+      err,
+    );
+  }
+}
+
 export function registerAppUpgradeHandlers() {
   handle(
     "get-app-upgrades",
@@ -175,6 +359,8 @@ export function registerAppUpgradeHandlers() {
         let isNeeded = false;
         if (upgrade.id === "component-tagger") {
           isNeeded = isComponentTaggerUpgradeNeeded(appPath);
+        } else if (upgrade.id === "capacitor") {
+          isNeeded = isCapacitorUpgradeNeeded(appPath);
         }
         return { ...upgrade, isNeeded };
       });
@@ -195,6 +381,8 @@ export function registerAppUpgradeHandlers() {
 
       if (upgradeId === "component-tagger") {
         await applyComponentTagger(appPath);
+      } else if (upgradeId === "capacitor") {
+        await applyCapacitor(appPath);
       } else {
         throw new Error(`Unknown upgrade id: ${upgradeId}`);
       }
