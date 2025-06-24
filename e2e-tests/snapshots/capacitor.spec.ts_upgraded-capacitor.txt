@@ -160,10 +160,10 @@ app/src/main/res/xml/config.xml
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.example.vitereactshadcnts"
+    namespace "com.example.[[normalizedAppName]]"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.example.vitereactshadcnts"
+        applicationId "com.example.[[normalizedAppName]]"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -313,8 +313,8 @@ public class ExampleInstrumentedTest {
 </manifest>
 
 
-=== android/app/src/main/java/com/example/vitereactshadcnts/MainActivity.java ===
-package com.example.vitereactshadcnts;
+=== android/app/src/main/java/com/example/[[normalizedAppName]]/MainActivity.java ===
+package com.example.[[normalizedAppName]];
 
 import com.getcapacitor.BridgeActivity;
 
@@ -647,10 +647,10 @@ public class MainActivity extends BridgeActivity {}
 === android/app/src/main/res/values/strings.xml ===
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">vite_react_shadcn_ts</string>
-    <string name="title_activity_main">vite_react_shadcn_ts</string>
-    <string name="package_name">com.example.vitereactshadcnts</string>
-    <string name="custom_url_scheme">com.example.vitereactshadcnts</string>
+    <string name="app_name">[[appName]]</string>
+    <string name="title_activity_main">[[appName]]</string>
+    <string name="package_name">com.example.[[normalizedAppName]]</string>
+    <string name="custom_url_scheme">com.example.[[normalizedAppName]]</string>
 </resources>
 
 
@@ -1308,8 +1308,8 @@ ext {
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.vitereactshadcnts',
-  appName: 'vite_react_shadcn_ts',
+  appId: 'com.example.[[normalizedAppName]]',
+  appName: '[[appName]]',
   webDir: 'dist'
 };
 
@@ -1760,7 +1760,7 @@ App/App/config.xml
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.vitereactshadcnts;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.[[normalizedAppName]];
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
@@ -1779,7 +1779,7 @@ App/App/config.xml
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.vitereactshadcnts;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.[[normalizedAppName]];
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
@@ -2004,7 +2004,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>vite_react_shadcn_ts</string>
+        <string>[[appName]]</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -2085,10 +2085,7 @@ end
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "cap:ios": "cap open ios",
-    "cap:android": "cap open android",
-    "cap:sync": "cap sync"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.0",

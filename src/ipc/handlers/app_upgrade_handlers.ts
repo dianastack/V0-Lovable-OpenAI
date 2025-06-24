@@ -90,23 +90,6 @@ function isCapacitorUpgradeNeeded(appPath: string): boolean {
     return false;
   }
 
-  // Check if Capacitor dependencies are already in package.json
-  const packageJsonPath = path.join(appPath, "package.json");
-  if (fs.existsSync(packageJsonPath)) {
-    try {
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
-      const dependencies = {
-        ...packageJson.dependencies,
-        ...packageJson.devDependencies,
-      };
-      if (dependencies["@capacitor/core"] || dependencies["@capacitor/cli"]) {
-        return false;
-      }
-    } catch (e) {
-      logger.error("Error reading package.json", e);
-    }
-  }
-
   return true;
 }
 
@@ -212,20 +195,13 @@ async function applyComponentTagger(appPath: string) {
   }
 }
 
-async function applyCapacitor(appPath: string) {
-  // Get app name from package.json
-  const packageJsonPath = path.join(appPath, "package.json");
-  let appName = "App";
-
-  if (fs.existsSync(packageJsonPath)) {
-    try {
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
-      appName = packageJson.name || "App";
-    } catch (e) {
-      logger.error("Error reading package.json for app name", e);
-    }
-  }
-
+async function applyCapacitor({
+  appName,
+  appPath,
+}: {
+  appName: string;
+  appPath: string;
+}) {
   // Install Capacitor dependencies
   await simpleSpawn({
     command:
@@ -251,34 +227,6 @@ async function applyCapacitor(appPath: string) {
     errorPrefix: "Failed to add iOS and Android platforms",
   });
 
-  // Add build scripts to package.json if they don't exist
-  if (fs.existsSync(packageJsonPath)) {
-    try {
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
-      const scripts = packageJson.scripts || {};
-
-      if (!scripts["cap:ios"]) {
-        scripts["cap:ios"] = "cap open ios";
-      }
-      if (!scripts["cap:android"]) {
-        scripts["cap:android"] = "cap open android";
-      }
-      if (!scripts["cap:sync"]) {
-        scripts["cap:sync"] = "cap sync";
-      }
-
-      packageJson.scripts = scripts;
-
-      await fs.promises.writeFile(
-        packageJsonPath,
-        JSON.stringify(packageJson, null, 2),
-      );
-      logger.info("Added Capacitor scripts to package.json");
-    } catch (e) {
-      logger.error("Error updating package.json with Capacitor scripts", e);
-    }
-  }
-
   // Commit changes
   try {
     logger.info("Staging and committing Capacitor changes");
@@ -292,6 +240,10 @@ async function applyCapacitor(appPath: string) {
     logger.warn(
       `Failed to commit changes. This may happen if the project is not in a git repository, or if there are no changes to commit.`,
       err,
+    );
+    throw new Error(
+      "Failed to commit Capacitor changes. Please commit them manually. Error: " +
+        err,
     );
   }
 }
@@ -330,7 +282,7 @@ export function registerAppUpgradeHandlers() {
       if (upgradeId === "component-tagger") {
         await applyComponentTagger(appPath);
       } else if (upgradeId === "capacitor") {
-        await applyCapacitor(appPath);
+        await applyCapacitor({ appName: app.name, appPath });
       } else {
         throw new Error(`Unknown upgrade id: ${upgradeId}`);
       }

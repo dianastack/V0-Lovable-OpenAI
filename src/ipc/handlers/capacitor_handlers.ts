@@ -7,6 +7,7 @@ import { getDyadAppPath } from "../../paths/paths";
 import fs from "node:fs";
 import path from "node:path";
 import { simpleSpawn } from "../utils/simpleSpawn";
+import { IS_TEST_BUILD } from "../utils/test_utils";
 
 const logger = log.scope("capacitor_handlers");
 const handle = createLoggedHandler(logger);
@@ -77,6 +78,12 @@ export function registerCapacitorHandlers() {
       throw new Error("Capacitor is not installed in this app");
     }
 
+    if (IS_TEST_BUILD) {
+      // In test mode, just log the action instead of actually opening Xcode
+      logger.info("Test mode: Simulating opening iOS project in Xcode");
+      return;
+    }
+
     await simpleSpawn({
       command: "npx cap open ios",
       cwd: appPath,
@@ -93,6 +100,14 @@ export function registerCapacitorHandlers() {
 
       if (!isCapacitorInstalled(appPath)) {
         throw new Error("Capacitor is not installed in this app");
+      }
+
+      if (IS_TEST_BUILD) {
+        // In test mode, just log the action instead of actually opening Android Studio
+        logger.info(
+          "Test mode: Simulating opening Android project in Android Studio",
+        );
+        return;
       }
 
       await simpleSpawn({
