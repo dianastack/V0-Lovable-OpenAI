@@ -122,8 +122,24 @@ jobs:
           pattern: blob-report-*
           merge-multiple: true
 
+      - name: Debug - List downloaded blob reports
+        run: |
+          echo "Contents of all-blob-reports directory:"
+          ls -la all-blob-reports/
+          echo "File sizes and details:"
+          find all-blob-reports/ -type f -exec ls -lh {} \; || echo "No files found"
+
       - name: Merge into HTML Report
-        run: npx playwright merge-reports --reporter html ./all-blob-reports
+        run: PLAYWRIGHT_HTML_OUTPUT_DIR=playwright-report npx playwright merge-reports --reporter html ./all-blob-reports
+        # Alternative approach if the above doesn't work:
+        # run: npx playwright merge-reports --config playwright.config.ts --reporter html ./all-blob-reports
+
+      - name: Debug - List playwright-report contents
+        run: |
+          echo "Contents of playwright-report directory:"
+          ls -la playwright-report/ || echo "playwright-report directory does not exist"
+          echo "Current directory contents:"
+          ls -la
 
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
