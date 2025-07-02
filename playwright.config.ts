@@ -12,7 +12,7 @@ const config: PlaywrightTestConfig = {
     "{testDir}/{testFileDir}/snapshots/{testFileName}_{arg}{ext}",
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: "html",
+  reporter: process.env.CI ? [["blob"], ["github"]] : [["html"], ["line"]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* See https://playwright.dev/docs/trace-viewer */
