@@ -41,14 +41,12 @@ npm run pre:e2e && npm run e2e
 # Run a specific shard (useful for debugging or parallel development)
 npm run e2e:shard 1/4
 
-# Run sharded tests locally and merge reports
+# Run sharded tests locally
 npm run pre:e2e
 npm run e2e:shard 1/4 &
 npm run e2e:shard 2/4 &
 npm run e2e:shard 3/4 &
 npm run e2e:shard 4/4 &
-wait
-npm run e2e:merge
 ```
 
 The CI system automatically runs e2e tests in 4 parallel shards for faster execution and then merges the results.
