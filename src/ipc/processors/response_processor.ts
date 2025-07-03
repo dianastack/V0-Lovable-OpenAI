@@ -497,7 +497,7 @@ export async function processFullResponseActions(
         .filter((row) => row[1] !== 1 || row[2] !== 1 || row[3] !== 1)
         .map((row) => row[0]); // Get just the file paths
 
-      if (uncommittedFiles.length > 0) {
+      if (uncommittedFiles.length > 10_000) {
         // Stage all changes
         await git.add({
           fs,
