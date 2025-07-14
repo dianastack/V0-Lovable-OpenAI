@@ -230,7 +230,7 @@ export function AICreditStatus({ userBudget }: { userBudget: UserBudgetInfo }) {
   return (
     <Tooltip>
       <TooltipTrigger>
-        <div className="text-xs mt-0.5">{remaining} credits</div>
+        <div className="text-xs pl-1 mt-0.5">{remaining} credits</div>
       </TooltipTrigger>
       <TooltipContent>
         <div>
