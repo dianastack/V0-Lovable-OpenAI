@@ -95,7 +95,7 @@ export const TitleBar = () => {
 
         {/* Preview Header */}
         {location.pathname === "/chat" && (
-          <div className="flex-1 flex justify-end no-app-region-drag">
+          <div className="flex-1 flex justify-end">
             <PreviewHeader />
           </div>
         )}
