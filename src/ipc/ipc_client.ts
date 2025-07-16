@@ -646,6 +646,94 @@ export class IpcClient {
   }
   // --- End GitHub Repo Management ---
 
+  // --- Vercel Device Flow ---
+  public startVercelDeviceFlow(appId: number | null): void {
+    this.ipcRenderer.invoke("vercel:start-flow", { appId });
+  }
+
+  public onVercelDeviceFlowUpdate(
+    callback: (data: {
+      userCode?: string;
+      verificationUri?: string;
+      message?: string;
+    }) => void,
+  ): () => void {
+    const listener = (_: any, data: any) => callback(data);
+    this.ipcRenderer.on("vercel:flow-update", listener);
+    return () => {
+      this.ipcRenderer.removeListener("vercel:flow-update", listener);
+    };
+  }
+
+  public onVercelDeviceFlowSuccess(
+    callback: (data: { message: string }) => void,
+  ): () => void {
+    const listener = (_: any, data: any) => callback(data);
+    this.ipcRenderer.on("vercel:flow-success", listener);
+    return () => {
+      this.ipcRenderer.removeListener("vercel:flow-success", listener);
+    };
+  }
+
+  public onVercelDeviceFlowError(
+    callback: (data: { error: string }) => void,
+  ): () => void {
+    const listener = (_: any, data: any) => callback(data);
+    this.ipcRenderer.on("vercel:flow-error", listener);
+    return () => {
+      this.ipcRenderer.removeListener("vercel:flow-error", listener);
+    };
+  }
+  // --- End Vercel Device Flow ---
+
+  // --- Vercel Project Management ---
+  public async listVercelProjects(): Promise<
+    { id: string; name: string; framework: string | null }[]
+  > {
+    return this.ipcRenderer.invoke("vercel:list-projects");
+  }
+
+  public async connectToExistingVercelProject(
+    projectId: string,
+    appId: number,
+  ): Promise<void> {
+    await this.ipcRenderer.invoke("vercel:connect-existing-project", {
+      projectId,
+      appId,
+    });
+  }
+
+  public async checkVercelProjectAvailable(
+    name: string,
+  ): Promise<{ available: boolean; error?: string }> {
+    return this.ipcRenderer.invoke("vercel:is-project-available", {
+      name,
+    });
+  }
+
+  public async createVercelProject(name: string, appId: number): Promise<void> {
+    await this.ipcRenderer.invoke("vercel:create-project", {
+      name,
+      appId,
+    });
+  }
+
+  // Deploy to Vercel
+  public async deployToVercel(
+    appId: number,
+  ): Promise<{ success: boolean; error?: string }> {
+    return this.ipcRenderer.invoke("vercel:deploy", {
+      appId,
+    });
+  }
+
+  public async disconnectVercelProject(appId: number): Promise<void> {
+    await this.ipcRenderer.invoke("vercel:disconnect", {
+      appId,
+    });
+  }
+  // --- End Vercel Project Management ---
+
   // Get the main app version
   public async getAppVersion(): Promise<string> {
     const result = await this.ipcRenderer.invoke("get-app-version");

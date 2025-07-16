@@ -81,6 +81,10 @@ export interface App {
   githubBranch: string | null;
   supabaseProjectId: string | null;
   supabaseProjectName: string | null;
+  vercelProjectId: string | null;
+  vercelProjectName: string | null;
+  vercelTeamId: string | null;
+  vercelDeploymentUrl: string | null;
 }
 
 export interface Version {
